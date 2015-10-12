@@ -113,7 +113,7 @@ if (isset($_REQUEST['upload'])) {
 		} else {
 			if ($_REQUEST['destination_radio'] == 'new') {
 				// Create the new album
-				$result = add_album(mysql_real_escape_string($_REQUEST['new_album_name']), NULL, $_REQUEST['collections_menu']);
+				$result = add_album(mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$_REQUEST['new_album_name']), NULL, $_REQUEST['collections_menu']);
 				if (!$result['errors']) {
 					// No errors, add uploaded image to new album
 					$album_id = $result['id'];
@@ -126,7 +126,7 @@ if (isset($_REQUEST['upload'])) {
 						// Get the collection name for display
 						$sql = "SELECT `name` FROM ".PLOGGER_TABLE_PREFIX."collections WHERE id = ".intval($_REQUEST['collections_menu']);
 						$result = run_query($sql);
-						$row = mysql_fetch_assoc($result);
+						$row = mysqli_fetch_assoc($result);
 						$output .= "\n\t" . '<p class="actions">'.sprintf(plog_tr('Album already exists. Uploading file to existing album %s in collection %s'), '<strong>'.$_REQUEST['new_album_name'].'</strong>', '<strong>'.$row['name'].'</strong>').'</p>' . "\n";
 					} else {
 						// Error has nothing to do with an existing album, show the returned error

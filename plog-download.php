@@ -234,13 +234,13 @@ function add_photos($checked, $type, $dir) {
 			$query = "SELECT * FROM `".PLOGGER_TABLE_PREFIX."collections` WHERE `id`='".intval($cid)."'";
 			$result = run_query($query);
 
-			while ($row = mysql_fetch_assoc($result)) {
+			while ($row = mysqli_fetch_assoc($result)) {
 				$query = "SELECT * FROM `".PLOGGER_TABLE_PREFIX."albums` WHERE `parent_id`='".$row['id']."'";
 				$newresult = run_query($query);
 
 				$newchecked = array();
 
-				while ($newrow = mysql_fetch_assoc($newresult)) {
+				while ($newrow = mysqli_fetch_assoc($newresult)) {
 					$newchecked[] = $newrow['id'];
 				}
 
@@ -262,13 +262,13 @@ function add_photos($checked, $type, $dir) {
 			$query = "SELECT * FROM `".PLOGGER_TABLE_PREFIX."albums` WHERE `id`='".intval($aid)."'";
 			$result = run_query($query);
 
-			while ($row = mysql_fetch_assoc($result)) {
+			while ($row = mysqli_fetch_assoc($result)) {
 				$query = "SELECT * FROM `".PLOGGER_TABLE_PREFIX."pictures` WHERE `parent_album`='".$row['id']."'";
 				$newresult = run_query($query);
 
 				$newchecked = array();
 
-				while ($newrow = mysql_fetch_assoc($newresult)) {
+				while ($newrow = mysqli_fetch_assoc($newresult)) {
 					$newchecked[] = $newrow['id'];
 				}
 
@@ -290,7 +290,7 @@ function add_photos($checked, $type, $dir) {
 			$query = "SELECT * FROM `".PLOGGER_TABLE_PREFIX."pictures` WHERE `id`='".intval($pid)."'";
 			$result = run_query($query);
 
-			while ($row = mysql_fetch_assoc($result)) {
+			while ($row = mysqli_fetch_assoc($result)) {
 				$file_contents = file_get_contents('plog-content/images/'.$row['path'], true);
 				$zipfile -> add_file($file_contents, $row['path']);
 

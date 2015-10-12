@@ -36,8 +36,8 @@ function get_picture_tags($picture_id) {
 	// TODO: Evaluate whether this method should return the same format for the tags (so in this method it would return an array of arrays, each containing 'id', 'tag' and 'urlified').
 
 	$query = 'SELECT `t2p`.`tag_id`, `t`.`urlified`, `t`.`tag` FROM `'.$TABLE_PREFIX.'tag2picture` as `t2p`, `'.$TABLE_PREFIX.'tags` as `t` WHERE `picture_id` = '.$picture_id.' AND `t2p`.`tag_id` = `t`.`id`;';
-	$result = mysql_query($query);
-	while($tag_row = mysql_fetch_assoc($result)) {
+	$result = mysqli_query($GLOBALS["PLOGGER_DBH"],$query);
+	while($tag_row = mysqli_fetch_assoc($result)) {
 		$picture_tags[$tag_row['urlified']] = $tag_row['tag_id'];
 	}
 	return $picture_tags;
@@ -47,7 +47,7 @@ function delete_picture_tags($picture_id) {
 	global $TABLE_PREFIX;
 	$picture_id = intval($picture_id);
 	$sql = 'DELETE FROM '.$TABLE_PREFIX.'tag2picture WHERE picture_id = '.$picture_id;
-	mysql_query($sql);
+	mysqli_query($GLOBALS["PLOGGER_DBH"],$sql);
 }
 
 function get_tag_by_name($tag) {
@@ -56,7 +56,7 @@ function get_tag_by_name($tag) {
 
 	$query = 'SELECT `id`, `tag`, `urlified` FROM `'.$TABLE_PREFIX.'tags` WHERE `tag`="'.$tag.'"';
 	$result = run_query($query);
-	$row = mysql_fetch_assoc($result);
+	$row = mysqli_fetch_assoc($result);
 
 	if (!is_array($row)) {
 		return NULL;
@@ -71,7 +71,7 @@ function get_tag_by_id($tag_id) {
 
 	$query = 'SELECT `id`, `tag`, `urlified` FROM `'.$TABLE_PREFIX.'tags` WHERE `id`='.$tag_id;
 	$result = run_query($query);
-	$row = mysql_fetch_assoc($result);
+	$row = mysqli_fetch_assoc($result);
 
 	if (!is_array($row)) {
 		return NULL;
@@ -91,11 +91,11 @@ function get_popular_tags($limit=NULL) {
 
 function insert_tag($tag) {
 	global $TABLE_PREFIX;
-	$urlified = mysql_real_escape_string(urlify_tag($tag));
+	$urlified = mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],urlify_tag($tag));
 	$sql = 'INSERT INTO '.$TABLE_PREFIX.'tags (`tag`,`tagdate`,`urlified`)
-	VALUES ("'.mysql_real_escape_string($tag).'", NOW(), "'.$urlified.'")';
-	if( mysql_query($sql) ) {
-		return mysql_insert_id();
+	VALUES ("'.mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$tag).'", NOW(), "'.$urlified.'")';
+	if( mysqli_query($GLOBALS["PLOGGER_DBH"],$sql) ) {
+		return mysqli_insert_id($GLOBALS["PLOGGER_DBH"]);
 	}
 }
 
@@ -109,14 +109,14 @@ function add_picture_tags($picture_id, $tags) {
 	if (sizeof($tags) > 0) {
 		$tagsql = join('", "', $tags);
 		$sql = 'SELECT * FROM '.$TABLE_PREFIX.'tags WHERE `tag` IN ("'.$tagsql.'")';
-		$result = mysql_query($sql);
-		while($tag_row = mysql_fetch_assoc($result)) {
+		$result = mysqli_query($GLOBALS["PLOGGER_DBH"],$sql);
+		while($tag_row = mysqli_fetch_assoc($result)) {
 			$existing_tags[$tag_row['tag']] = $tag_row['id'];
 		}
 
 		$sql = 'SELECT * FROM '.$TABLE_PREFIX.'tag2picture WHERE `picture_id` ="'.$picture_id.'"';
-		$result = mysql_query($sql);
-		while($tag_row = mysql_fetch_assoc($result)) {
+		$result = mysqli_query($GLOBALS["PLOGGER_DBH"],$sql);
+		while($tag_row = mysqli_fetch_assoc($result)) {
 			$existing_rels[$tag_row['tag_id']] = $tag_row['picture_id'];
 		}
 	}
@@ -133,7 +133,7 @@ function add_picture_tags($picture_id, $tags) {
 			// No connection between tag and picture? create if
 			$sql = 'INSERT INTO '.$TABLE_PREFIX.'tag2picture (`picture_id`,`tag_id`,`tagdate`)
 			VALUES ("'.$picture_id.'", "'.$existing_tags[$tag].'", NOW())';
-			mysql_query($sql);
+			mysqli_query($GLOBALS["PLOGGER_DBH"],$sql);
 		}
 	}
 
@@ -145,9 +145,9 @@ function delete_tags($tag_ids) {
 	global $TABLE_PREFIX;
 	$tagsql = join(', ', $tag_ids);
 	$sql = 'DELETE FROM '.$TABLE_PREFIX.'tag2picture WHERE tag_id IN ('.$tagsql.')';
-	mysql_query($sql);
+	mysqli_query($GLOBALS["PLOGGER_DBH"],$sql);
 	$sql = 'DELETE FROM '.$TABLE_PREFIX.'tags WHERE id IN ('.$tagsql.')';
-	mysql_query($sql);
+	mysqli_query($GLOBALS["PLOGGER_DBH"],$sql);
 }
 
 function remove_picture_tags($picture_id, $tag_ids) {
@@ -173,14 +173,14 @@ function update_picture_tags($picture_id, $tags) {
 	if (sizeof($tags) > 0) {
 		$tagsql = join('", "', $tags);
 		$sql = 'SELECT * FROM '.$TABLE_PREFIX.'tags WHERE `tag` IN ("'.$tagsql.'")';
-		$result = mysql_query($sql);
-		while($tag_row = mysql_fetch_assoc($result)) {
+		$result = mysqli_query($GLOBALS["PLOGGER_DBH"],$sql);
+		while($tag_row = mysqli_fetch_assoc($result)) {
 			$existing_tags[$tag_row['tag']] = $tag_row['id'];
 		}
 
 		$sql = 'SELECT * FROM '.$TABLE_PREFIX.'tag2picture WHERE `picture_id` ="'.$picture_id.'"';
-		$result = mysql_query($sql);
-		while($tag_row = mysql_fetch_assoc($result)) {
+		$result = mysqli_query($GLOBALS["PLOGGER_DBH"],$sql);
+		while($tag_row = mysqli_fetch_assoc($result)) {
 			$existing_rels[$tag_row['tag_id']] = $tag_row['picture_id'];
 		}
 	}
@@ -188,19 +188,19 @@ function update_picture_tags($picture_id, $tags) {
 	foreach($tags as $tag) {
 		if (!isset($existing_tags[$tag])) {
 			// Must be a new tag, register it
-			$path = mysql_real_escape_string(preg_replace("/[^\w|\.|'|\-|\[|\]]/", "_", $tag));
+			$path = mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],preg_replace("/[^\w|\.|'|\-|\[|\]]/", "_", $tag));
 			$sql = 'INSERT INTO '.$TABLE_PREFIX.'tags (`tag`, `tagdate`, `path`)
-			VALUES ("'.mysql_real_escape_string($tag).'", "'.$path.'", NOW())';
+			VALUES ("'.mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$tag).'", "'.$path.'", NOW())';
 			print $sql;
-			$result = mysql_query($sql);
-			$existing_tags[$tag] = mysql_insert_id();
+			$result = mysqli_query($GLOBALS["PLOGGER_DBH"],$sql);
+			$existing_tags[$tag] = mysqli_insert_id($GLOBALS["PLOGGER_DBH"]);
 		}
 
 		if (!isset($existing_rels[$existing_tags[$tag]])) {
 			// No connection between tag and picture? create if
 			$sql = 'INSERT INTO '.$TABLE_PREFIX.'tag2picture (`picture_id`, `tag_id`, `tagdate`)
 			VALUES ("'.$picture_id.'", "'.$existing_tags[$tag].'", NOW())';
-			mysql_query($sql);
+			mysqli_query($GLOBALS["PLOGGER_DBH"],$sql);
 		}
 	}
 
@@ -209,7 +209,7 @@ function update_picture_tags($picture_id, $tags) {
 		if (!in_array($tag_id,$existing_tags)) {
 			$sql = "DELETE FROM `".$TABLE_PREFIX."tag2picture`
 			WHERE `picture_id` = '$picture_id' AND `tag_id` = '$tag_id'";
-			mysql_query($sql);
+			mysqli_query($GLOBALS["PLOGGER_DBH"],$sql);
 		}
 	}
 

@@ -10,13 +10,13 @@ require_once(PLOGGER_DIR.'plog-admin/plog-admin-functions.php');
 
 function maybe_add_column($table, $column, $add_sql) {
 	$sql = "DESCRIBE $table";
-	$res = mysql_query($sql);
+	$res = mysqli_query($GLOBALS["PLOGGER_DBH"],$sql);
 	$found = false;
-	while($row = mysql_fetch_array($res, MYSQL_NUM)) {
+	while($row = mysqli_fetch_array($res, MYSQL_NUM)) {
 		if ($row[0] == $column) $found = true;
 	}
 	if (!$found) {
-		mysql_query("ALTER TABLE $table ADD `$column` ".$add_sql);
+		mysqli_query($GLOBALS["PLOGGER_DBH"],"ALTER TABLE $table ADD `$column` ".$add_sql);
 		return plog_tr('Added new field to database').': '.$column;
 	} else {
 		if (defined('PLOGGER_DEBUG')) {
@@ -28,14 +28,14 @@ function maybe_add_column($table, $column, $add_sql) {
 
 function maybe_drop_column($table, $column) {
 	$sql = "DESCRIBE $table";
-	$res = mysql_query($sql);
+	$res = mysqli_query($GLOBALS["PLOGGER_DBH"],$sql);
 	$found = false;
-	while($row = mysql_fetch_array($res, MYSQL_NUM)) {
+	while($row = mysqli_fetch_array($res, MYSQL_NUM)) {
 		if ($row[0] == $column) $found = true;
 	}
 	if ($found) {
 		$sql = "ALTER TABLE $table DROP `$column`";
-		mysql_query($sql);
+		mysqli_query($GLOBALS["PLOGGER_DBH"],$sql);
 		return plog_tr('Dropped column').': '.$column;
 	} else {
 		if (defined('PLOGGER_DEBUG')) {
@@ -47,12 +47,12 @@ function maybe_drop_column($table, $column) {
 
 function maybe_add_table($table, $add_sql, $options = '') {
 	$sql = "DESCRIBE $table";
-	$res = mysql_query($sql);
+	$res = mysqli_query($GLOBALS["PLOGGER_DBH"],$sql);
 	if (!$res) {
 		$q = "CREATE table `$table` ($add_sql) $options";
-		mysql_query($q);
-		if (mysql_error()) {
-			var_dump(mysql_error());
+		mysqli_query($GLOBALS["PLOGGER_DBH"],$q);
+		if (mysqli_error($GLOBALS["PLOGGER_DBH"])) {
+			var_dump(mysqli_error($GLOBALS["PLOGGER_DBH"]));
 		} else {
 			return true;
 		}
@@ -68,7 +68,7 @@ function get_default_charset() {
 	// Since 4.1 MySQL has support for specifying character encoding for tables
 	// and I really want to use it if available. So we need figure out what version
 	// we are running on and to the right thing
-	$mysql_version = mysql_get_server_info();
+	$mysql_version = mysqli_get_server_info($GLOBALS["PLOGGER_DBH"]);
 	$mysql_charset_support = '4.1';
 	$default_charset = '';
 
@@ -351,7 +351,7 @@ function create_tables() {
 	`id` int(11) NOT NULL auto_increment,
 	`thumbnail_id` int(11) NOT NULL DEFAULT '0',
 	PRIMARY KEY (`id`)"
-	,"Type=MyISAM $default_charset");
+	,"Engine=MyISAM $default_charset");
 
 	maybe_add_table(
 	PLOGGER_TABLE_PREFIX.'albums'
@@ -363,7 +363,7 @@ function create_tables() {
 	`thumbnail_id` int(11) NOT NULL default '0',
 	PRIMARY KEY (`id`),
 	INDEX pid_idx (`parent_id`)"
-	," Type=MyISAM $default_charset");
+	," Engine=MyISAM $default_charset");
 
 	maybe_add_table(
 	PLOGGER_TABLE_PREFIX.'pictures'
@@ -373,8 +373,8 @@ function create_tables() {
 	`caption` mediumtext NOT NULL,
 	`description` text NOT NULL,
 	`id` int(11) NOT NULL auto_increment,
-	`date_modified` timestamp(14) NOT NULL,
-	`date_submitted` timestamp(14) NOT NULL,
+	`date_modified` timestamp(6) NOT NULL,
+	`date_submitted` timestamp(6) NOT NULL,
 	`EXIF_date_taken` varchar(64) NOT NULL default '',
 	`EXIF_camera` varchar(64) NOT NULL default '',
 	`EXIF_shutterspeed` varchar(64) NOT NULL default '',
@@ -386,7 +386,7 @@ function create_tables() {
 	PRIMARY KEY (`id`),
 	INDEX pa_idx (`parent_album`),
 	INDEX pc_idx (`parent_collection`)"
-	,"Type=MyISAM $default_charset");
+	,"Engine=MyISAM $default_charset");
 
 	maybe_add_table(
 	PLOGGER_TABLE_PREFIX.'comments'
@@ -402,7 +402,7 @@ function create_tables() {
 	PRIMARY KEY (`id`),
 	INDEX pid_idx (`parent_id`),
 	INDEX approved_idx (`approved`)"
-	,"Type=MyISAM $default_charset");
+	,"Engine=MyISAM $default_charset");
 
 	maybe_add_table(
 	PLOGGER_TABLE_PREFIX.'config'
@@ -435,7 +435,7 @@ function create_tables() {
 	`thumb_nav_range` int(11) NOT NULL default '0',
 	`allow_fullpic` tinyint default '1',
 	PRIMARY KEY (`thumb_num`)"
-	,"Type=MyISAM $default_charset");
+	,"Engine=MyISAM $default_charset");
 
 	maybe_add_table(
 	PLOGGER_TABLE_PREFIX.'thumbnail_config'
@@ -445,7 +445,7 @@ function create_tables() {
 	`disabled` tinyint default '0',
 	`resize_option` tinyint default '2',
 	PRIMARY KEY (`id`)"
-	,"Type=MyISAM $default_charset");
+	,"Engine=MyISAM $default_charset");
 
 	/*maybe_add_table(
 	PLOGGER_TABLE_PREFIX.'tag2picture'
@@ -454,7 +454,7 @@ function create_tables() {
 	`tagdate` datetime default NULL,
 	KEY `tag_id` (`tag_id`),
 	KEY `picture_id` (`picture_id`)"
-	,"Type=MyISAM $default_charset");
+	,"Engine=MyISAM $default_charset");
 
 	maybe_add_table(
 	PLOGGER_TABLE_PREFIX.'tags'
@@ -465,7 +465,7 @@ function create_tables() {
 	PRIMARY KEY  (`id`),
 	UNIQUE `tag` (`tag`),
 	UNIQUE `urlified` (`urlified`)"
-	,"Type=MyISAM $default_charset");*/
+	,"Engine=MyISAM $default_charset");*/
 
 }
 
@@ -484,7 +484,7 @@ function configure_plogger($form) {
 		$resize = ($key == THUMB_SMALL || $key == THUMB_NAV) ? 3: 2;
 		$sql = "INSERT INTO `".PLOGGER_TABLE_PREFIX."thumbnail_config` (`id`, `update_timestamp`, `max_size`, `resize_option`)
 		VALUES('$key', '$long_ago', '$size', '$resize')";
-		mysql_query($sql);
+		mysqli_query($GLOBALS["PLOGGER_DBH"],$sql);
 	}
 
 	$config['gallery_url'] = 'http://'.$_SERVER['SERVER_NAME'].dirname(dirname($_SERVER['PHP_SELF']));
@@ -507,8 +507,8 @@ function configure_plogger($form) {
 
 	$config = array_map('mysql_real_escape_string', $config);
 
-	$row_exist = mysql_query("SELECT * FROM `".PLOGGER_TABLE_PREFIX."config`");
-	$row_exist_num = mysql_num_rows($row_exist);
+	$row_exist = mysqli_query($GLOBALS["PLOGGER_DBH"],"SELECT * FROM `".PLOGGER_TABLE_PREFIX."config`");
+	$row_exist_num = mysqli_num_rows($row_exist);
 
 	if ($row_exist_num == 0) {
 		$query = "INSERT INTO `".PLOGGER_TABLE_PREFIX."config`
@@ -546,7 +546,7 @@ function configure_plogger($form) {
 			`gallery_name` = '${config['gallery_name']}',
 			`gallery_url` = '${config['gallery_url']}'";
 	}
-	mysql_query($query);
+	mysqli_query($GLOBALS["PLOGGER_DBH"],$query);
 
 	// Create the FTP columns in the config table if safe_mode enabled/
 	if (is_safe_mode() && isset($_SESSION['ftp_values'])) {
@@ -570,11 +570,11 @@ function configure_ftp($form) {
 	maybe_add_column(PLOGGER_TABLE_PREFIX.'config', 'ftp_pass', "varchar(64) NOT NULL default ''");
 	maybe_add_column(PLOGGER_TABLE_PREFIX.'config', 'ftp_path', "varchar(255) NOT NULL default ''");
 	$query = "UPDATE `".PLOGGER_TABLE_PREFIX."config` SET
-		`ftp_host` = '".mysql_real_escape_string($form['ftp_host'])."',
-		`ftp_user` = '".mysql_real_escape_string($form['ftp_user'])."',
-		`ftp_pass` = '".mysql_real_escape_string($form['ftp_pass'])."',
-		`ftp_path` = '".mysql_real_escape_string($form['ftp_path'])."'";
-	mysql_query($query);
+		`ftp_host` = '".mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$form['ftp_host'])."',
+		`ftp_user` = '".mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$form['ftp_user'])."',
+		`ftp_pass` = '".mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$form['ftp_pass'])."',
+		`ftp_path` = '".mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$form['ftp_path'])."'";
+	mysqli_query($GLOBALS["PLOGGER_DBH"],$query);
 }
 
 function fix_open_perms($dirs, $action = 'rename') {
@@ -664,7 +664,7 @@ function upgrade_database() {
 		if (!isset($thumbnail_config[THUMB_SMALL]) || empty($thumbnail_config[THUMB_SMALL]['size'])) {
 			$sql = "INSERT INTO `".PLOGGER_TABLE_PREFIX."thumbnail_config` (id, update_timestamp, max_size)
 				VALUES('".THUMB_SMALL."', '".$long_ago."', '".$config['max_thumbnail_size']."')";
-			mysql_query($sql);
+			mysqli_query($GLOBALS["PLOGGER_DBH"],$sql);
 		}
 
 		if (!isset($config['max_display_size'])) {
@@ -673,7 +673,7 @@ function upgrade_database() {
 		if (!isset($thumbnail_config[THUMB_LARGE]) || empty($thumbnail_config[THUMB_LARGE]['size'])) {
 			$sql = "INSERT INTO `".PLOGGER_TABLE_PREFIX."thumbnail_config` (id, update_timestamp, max_size)
 				VALUES('".THUMB_LARGE."', '".$long_ago."', '".$config['max_display_size']."')";
-			mysql_query($sql);
+			mysqli_query($GLOBALS["PLOGGER_DBH"],$sql);
 		}
 
 		if (!isset($config['rss_thumbsize'])) {
@@ -682,7 +682,7 @@ function upgrade_database() {
 		if (!isset($thumbnail_config[THUMB_RSS]) || empty($thumbnail_config[THUMB_RSS]['size'])) {
 			$sql = "INSERT INTO `".PLOGGER_TABLE_PREFIX."thumbnail_config` (id, update_timestamp, max_size)
 				VALUES('".THUMB_RSS."', '".$long_ago."', '".$config['rss_thumbsize']."')";
-			mysql_query($sql);
+			mysqli_query($GLOBALS["PLOGGER_DBH"],$sql);
 		}
 
 		if (!isset($config['nav_thumbsize'])) {
@@ -691,7 +691,7 @@ function upgrade_database() {
 		if (!isset($thumbnail_config[THUMB_NAV]) || empty($thumbnail_config[THUMB_NAV]['size'])) {
 			$sql = "INSERT INTO `".PLOGGER_TABLE_PREFIX."thumbnail_config` (id, update_timestamp, max_size)
 				VALUES('".THUMB_NAV."', '".$long_ago."', '".$config['nav_thumbsize']."')";
-			mysql_query($sql);
+			mysqli_query($GLOBALS["PLOGGER_DBH"],$sql);
 		}
 	}
 
@@ -709,19 +709,19 @@ function upgrade_database() {
 	// Make sure to set the resize_option to square for small thumbs if previously set
 	if (isset($config['square_thumbs']) && $config['square_thumbs'] == 1) {
 		$sql = "UPDATE `".PLOGGER_TABLE_PREFIX."thumbnail_config` SET `resize_option` = '3' WHERE `id` = '".THUMB_SMALL."'";
-		mysql_query($sql);
+		mysqli_query($GLOBALS["PLOGGER_DBH"],$sql);
 	}
 
 	// Move enable_thumb_nav setting to plogger_thumbnail_config table
 	if (isset($config['enable_thumb_nav'])) {
 		$disabled = ($config['enable_thumb_nav'] == 0) ? 1 : 0;
 		$sql = "UPDATE `".PLOGGER_TABLE_PREFIX."thumbnail_config` SET `disabled` = '$disabled' WHERE `id` = '".THUMB_NAV."'";
-		mysql_query($sql);
+		mysqli_query($GLOBALS["PLOGGER_DBH"],$sql);
 	}
 
 	// set navigation thumbnails to square
 	$sql = "UPDATE `".PLOGGER_TABLE_PREFIX."thumbnail_config` SET `resize_option` = '3' WHERE `id` = '".THUMB_NAV."'";
-	mysql_query($sql);
+	mysqli_query($GLOBALS["PLOGGER_DBH"],$sql);
 	
 
 /** plogger_config **/
@@ -783,14 +783,14 @@ function upgrade_database() {
 		$config['baseurl'] = 'http://'.$_SERVER['HTTP_HOST'].dirname(dirname($_SERVER['PHP_SELF'])).'/';
 		$output[] = plog_tr('Setting gallery url to ').$config['baseurl'];
 		$sql = "UPDATE `".PLOGGER_TABLE_PREFIX."config` SET gallery_url = '".$config['baseurl']."'";
-		mysql_query($sql);
+		mysqli_query($GLOBALS["PLOGGER_DBH"],$sql);
 	}
 
 	// Insert default theme directory if not already set
 	if (!isset($config['theme_dir']) || empty($config['theme_dir'])) {
 		$output[] = plog_tr('Setting default theme directory to \'default\'');
 		$sql = "UPDATE ".PLOGGER_TABLE_PREFIX."config SET `theme_dir` = 'default' WHERE 1";
-		mysql_query($sql);
+		mysqli_query($GLOBALS["PLOGGER_DBH"],$sql);
 	}
 
 /** plogger_collections **/
@@ -866,17 +866,17 @@ function upgrade_database() {
 	");*/
 
 	$sql = 'ALTER TABLE '.PLOGGER_TABLE_PREFIX.'comments ADD INDEX approved_idx (`approved`)';
-	mysql_query($sql);
+	mysqli_query($GLOBALS["PLOGGER_DBH"],$sql);
 
 	// Add ip and approved fields to comments table
 	$sql = 'ALTER TABLE '.PLOGGER_TABLE_PREFIX.'comments CHANGE `date` `date` datetime';
-	mysql_query($sql);
+	mysqli_query($GLOBALS["PLOGGER_DBH"],$sql);
 
 	// Convert charsets
 	// Since 4.1 MySQL has support for specifying character encoding for tables
 	// and I really want to use it if available. So we need figure out what version
 	// we are running on and to the right hting
-	$mysql_version = mysql_get_server_info();
+	$mysql_version = mysqli_get_server_info($GLOBALS["PLOGGER_DBH"]);
 	$mysql_charset_support = '4.1';
 	$default_charset = '';
 
@@ -886,8 +886,8 @@ function upgrade_database() {
 		foreach($tables as $table) {
 			$tablename = PLOGGER_TABLE_PREFIX.$table;
 			$sql = "ALTER TABLE $tablename DEFAULT CHARACTER SET $charset";
-			if (!mysql_query($sql)) {
-				$output[] = "failed to convert $tablename to $charset<br />".mysql_error();
+			if (!mysqli_query($GLOBALS["PLOGGER_DBH"],$sql)) {
+				$output[] = "failed to convert $tablename to $charset<br />".mysqli_error($GLOBALS["PLOGGER_DBH"]);
 			}
 		}
 	}
@@ -901,14 +901,14 @@ function upgrade_image_list() {
 
 	// Strip 'images/' prefix from pictures table
 	$sql = "UPDATE ".PLOGGER_TABLE_PREFIX."pictures SET path = SUBSTRING(path,8) WHERE SUBSTRING(path,1,7) = 'images/'"; 
-	mysql_query($sql);
+	mysqli_query($GLOBALS["PLOGGER_DBH"],$sql);
 
 	// Update 'path' for collections table
 	$sql = "SELECT id,name FROM ".PLOGGER_TABLE_PREFIX."collections";
-	$result = mysql_query($sql);
-	while($row = mysql_fetch_assoc($result)) {
+	$result = mysqli_query($GLOBALS["PLOGGER_DBH"],$sql);
+	while($row = mysqli_fetch_assoc($result)) {
 		$sql = "UPDATE ".PLOGGER_TABLE_PREFIX."collections SET path = '".strtolower(sanitize_filename($row['name']))."' WHERE id = ".$row['id'];
-		mysql_query($sql);
+		mysqli_query($GLOBALS["PLOGGER_DBH"],$sql);
 		if (!file_exists(PLOGGER_DIR.'plog-content/images/'.strtolower(sanitize_filename($row['name'])))) {
 			$list[$total] = array('container' => 1, 'new_path' => 'plog-content/images/'.strtolower(sanitize_filename($row['name'])));
 			$total++;
@@ -919,10 +919,10 @@ function upgrade_image_list() {
 	$sql = "SELECT a.id AS id, a.name AS name, c.path AS collection_path
 					FROM ".PLOGGER_TABLE_PREFIX."albums a, ".PLOGGER_TABLE_PREFIX."collections c
 					WHERE a.parent_id = c.id";
-	$result = mysql_query($sql);
-	while($row = mysql_fetch_assoc($result)) {
+	$result = mysqli_query($GLOBALS["PLOGGER_DBH"],$sql);
+	while($row = mysqli_fetch_assoc($result)) {
 		$sql = "UPDATE ".PLOGGER_TABLE_PREFIX."albums SET path = '".strtolower(sanitize_filename($row['name']))."' WHERE id = ".$row['id'];
-		mysql_query($sql);
+		mysqli_query($GLOBALS["PLOGGER_DBH"],$sql);
 		if (!file_exists(PLOGGER_DIR.'plog-content/images/'.$row['collection_path'].'/'.strtolower(sanitize_filename($row['name'])))) {
 			$list[$total] = array('container' => 1, 'new_path' => 'plog-content/images/'.$row['collection_path'].'/'.strtolower(sanitize_filename($row['name'])));
 			$total++;
@@ -933,9 +933,9 @@ function upgrade_image_list() {
 	$sql = "SELECT p.path AS path, p.id AS pid,c.path AS collection_path, a.path AS album_path
 			FROM ".PLOGGER_TABLE_PREFIX."albums a, ".PLOGGER_TABLE_PREFIX."pictures p, ".PLOGGER_TABLE_PREFIX."collections c 
 			WHERE p.parent_album = a.id AND p.parent_collection = c.id";
-	$result = mysql_query($sql);
+	$result = mysqli_query($GLOBALS["PLOGGER_DBH"],$sql);
 
-	while($row = mysql_fetch_assoc($result)) {
+	while($row = mysqli_fetch_assoc($result)) {
 		$filename = sanitize_filename(basename($row['path']));
 		$c_directory = $row['collection_path'].'/';
 		$a_directory = $row['collection_path'].'/'.$row['album_path'].'/';
@@ -996,7 +996,7 @@ function upgrade_images($num, $list) {
 					@chmod(PLOGGER_DIR.$new_path, PLOGGER_CHMOD_DIR);
 					$output[] = sprintf(plog_tr('Moved file %s -> %s'), '<strong>'.$image['old_path'].'</strong>', '<strong>'.'plog-content/images/'.$image['new_path'].'</strong>');
 					// Update database
-					$sql = "UPDATE ".PLOGGER_TABLE_PREFIX."pictures SET path = '".mysql_real_escape_string($image['new_path'])."' WHERE id = '".$image['id']."'";
+					$sql = "UPDATE ".PLOGGER_TABLE_PREFIX."pictures SET path = '".mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$image['new_path'])."' WHERE id = '".$image['id']."'";
 					run_query($sql);
 					// Generate a new small thumbnail after database has been updated in case script times out
 					$thumbpath = generate_thumb($image['new_path'], $image['id'], THUMB_SMALL);

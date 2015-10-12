@@ -50,12 +50,12 @@ $plog_random_images_query = "SELECT * FROM ".PLOGGER_TABLE_PREFIX."pictures ORDE
 /* The database query to pull random images from a specific collection. Uncomment and change the X to the ID of the desired collection. */
 //$plog_random_images_query = "SELECT * FROM ".PLOGGER_TABLE_PREFIX."pictures WHERE `parent_collection` = X ORDER BY RAND() LIMIT $plog_random_images_amount";
 
-$plog_random_images_result = mysql_query($plog_random_images_query) or die ("Could not execute query: $plog_random_images_query." .mysql_error());
+$plog_random_images_result = mysqli_query($GLOBALS["PLOGGER_DBH"],$plog_random_images_query) or die ("Could not execute query: $plog_random_images_query." .mysqli_error($GLOBALS["PLOGGER_DBH"]));
 
 $config['baseurl'] = $plog_random_images_site_url;
 
 /* The loop */
-while ($row = mysql_fetch_array($plog_random_images_result)) {
+while ($row = mysqli_fetch_array($plog_random_images_result)) {
 	$id = $row['id'];
 	$path = $row['path'];
 	$caption = SmartStripSlashes($row['caption']);

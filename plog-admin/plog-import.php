@@ -77,7 +77,7 @@ if (isset($_POST['upload'])) {
 					// Get the collection name for display
 					$sql = "SELECT `name` FROM ".PLOGGER_TABLE_PREFIX."collections WHERE id = ".intval($_REQUEST['collections_menu']);
 					$result = run_query($sql);
-					$row = mysql_fetch_assoc($result);
+					$row = mysqli_fetch_assoc($result);
 					$output .= "\n\t" . '<p class="actions">'.sprintf(plog_tr('Album already exists. Uploading file to existing album %s in collection %s'), '<strong>'.$_REQUEST['new_album_name'].'</strong>', '<strong>'.$row['name'].'</strong>').'</p>' . "\n";
 				} else {
 					// Error has nothing to do with an existing album, show the returned error
@@ -125,7 +125,7 @@ if (isset($_POST['upload'])) {
 			// Get album name for display
 			$sql = "SELECT name FROM ".PLOGGER_TABLE_PREFIX."albums WHERE id = $album_id";
 			$result = run_query($sql);
-			$row = mysql_fetch_assoc($result);
+			$row = mysqli_fetch_assoc($result);
 
 			$output .= "\n\t" . '<h1>'.plog_tr('Import').'</h1>';
 
@@ -346,12 +346,12 @@ if (isset($_POST['upload'])) {
 
 			// Check if album exists
 			if (is_null($album_name)) // file is only one level deep, assume folder name is album name
-			$sql = "SELECT id FROM ".PLOGGER_TABLE_PREFIX."albums WHERE name = '".mysql_real_escape_string($collection_name)."'";
+			$sql = "SELECT id FROM ".PLOGGER_TABLE_PREFIX."albums WHERE name = '".mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$collection_name)."'";
 			else
-			$sql = "SELECT id FROM ".PLOGGER_TABLE_PREFIX."albums WHERE name = '".mysql_real_escape_string($album_name)."'";
+			$sql = "SELECT id FROM ".PLOGGER_TABLE_PREFIX."albums WHERE name = '".mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$album_name)."'";
 
 			$result = run_query($sql);
-			$row = mysql_fetch_assoc($result);
+			$row = mysqli_fetch_assoc($result);
 			$new_album_name = '';
 
 			if(!isset($row['id'])) { // Album doesn't exist, place in new album box

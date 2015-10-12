@@ -47,9 +47,9 @@ class response {
 }
 
 function get_album_by_name($name) {
-	$sqlAlbum = "SELECT * FROM `".PLOGGER_TABLE_PREFIX."albums` WHERE name = '".mysql_real_escape_string($name)."'";
+	$sqlAlbum = "SELECT * FROM `".PLOGGER_TABLE_PREFIX."albums` WHERE name = '".mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$name)."'";
 	$resultAlbum = run_query($sqlAlbum);
-	return mysql_fetch_assoc($resultAlbum);
+	return mysqli_fetch_assoc($resultAlbum);
 }
 
 function login($user, $password) {
@@ -87,7 +87,7 @@ function list_albums() {
 	);
 	$i = 2;
 
-	while($rowCollection = mysql_fetch_assoc($resultCollections)) {
+	while($rowCollection = mysqli_fetch_assoc($resultCollections)) {
 		$id = $rowCollection['id'];
 		$description = $rowCollection['description'];
 		$name = $rowCollection['name'];
@@ -122,7 +122,7 @@ function list_albums() {
 
 	$sqlAlbum = "SELECT * FROM `".PLOGGER_TABLE_PREFIX."albums` ORDER BY `name` ASC";
 	$resultAlbum = run_query($sqlAlbum);
-	while ($rowAlbum = mysql_fetch_assoc($resultAlbum)) {
+	while ($rowAlbum = mysqli_fetch_assoc($resultAlbum)) {
 		$id = $rowAlbum['id'];
 		$parent_id = $parents[$rowAlbum['parent_id']];
 		$albums[$i] = array(
@@ -177,7 +177,7 @@ function list_images($albumname) {
 	if ($albuminfo) {
 		$sqlPictures = "SELECT * FROM `".PLOGGER_TABLE_PREFIX."pictures` WHERE parent_album = ".intval($albuminfo['id']);
 		$resultAlbum = run_query($sqlPictures);
-		while ($rowAlbum = mysql_fetch_assoc($resultAlbum)) {
+		while ($rowAlbum = mysqli_fetch_assoc($resultAlbum)) {
 			$response->set_key("image.name.${i}", $rowAlbum['path']);
 			//print "image.raw_width.0=400\n";
 			//print "image.raw_height.0=400\n";
@@ -195,10 +195,10 @@ function list_images($albumname) {
 
 function gr_add_album($parent, $name, $description) {
 	// Parent is the name of the collection
-	$query = "SELECT * FROM `".PLOGGER_TABLE_PREFIX."collections` WHERE name = '".mysql_real_escape_string($parent)."'";
+	$query = "SELECT * FROM `".PLOGGER_TABLE_PREFIX."collections` WHERE name = '".mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$parent)."'";
 	$result = run_query($query);
 
-	$row = mysql_fetch_assoc($result);
+	$row = mysqli_fetch_assoc($result);
 
 	if (empty($name)) {
 		$name = 'no name';

@@ -235,7 +235,7 @@ function add_picture($album_id, $tmpname, $filename, $caption, $desc, $allow_com
 			WHERE c.id = a.parent_id AND a.id = '$album_id'";
 
 	$sql_result = run_query($sql);
-	$albumdata = mysql_fetch_assoc($sql_result);
+	$albumdata = mysqli_fetch_assoc($sql_result);
 
 	// This shouldn't happen in normal cases
 	if (empty($albumdata)) {
@@ -323,24 +323,24 @@ function add_picture($album_id, $tmpname, $filename, $caption, $desc, $allow_com
 			VALUES
 				('".$albumdata['collection_id']."',
 				'".$albumdata['album_id']."',
-				'".mysql_real_escape_string($picture_path)."',
+				'".mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$picture_path)."',
 				NOW(),
 				NOW(),
 				".intval($allow_comm).",
-				'".mysql_real_escape_string($exif['date_taken'])."',
-				'".mysql_real_escape_string($exif['camera'])."',
-				'".mysql_real_escape_string($exif['shutter_speed'])."',
-				'".mysql_real_escape_string($exif['focal_length'])."',
-				'".mysql_real_escape_string($exif['flash'])."',
-				'".mysql_real_escape_string($exif['aperture'])."',
-				'".mysql_real_escape_string($exif['iso'])."',
-				'".mysql_real_escape_string($caption)."',
-				'".mysql_real_escape_string($desc)."')";
+				'".mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$exif['date_taken'])."',
+				'".mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$exif['camera'])."',
+				'".mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$exif['shutter_speed'])."',
+				'".mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$exif['focal_length'])."',
+				'".mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$exif['flash'])."',
+				'".mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$exif['aperture'])."',
+				'".mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$exif['iso'])."',
+				'".mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$caption)."',
+				'".mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$desc)."')";
 
 		$sql_result = run_query($query);
 
 		$result['output'] .= sprintf(plog_tr('Your image %s was uploaded successfully.'), '<strong>'.$filename.'</strong>');
-		$result['picture_id'] = mysql_insert_id();
+		$result['picture_id'] = mysqli_insert_id($GLOBALS["PLOGGER_DBH"]);
 
 		// Let's generate the thumbnail and the large thumbnail right away.
 		// This way, the user won't see any latency from the thumbnail generation
@@ -357,19 +357,19 @@ function add_picture($album_id, $tmpname, $filename, $caption, $desc, $allow_com
 
 function update_picture($id, $caption, $allow_comments, $description) {
 	$id = intval($id);
-	$caption = mysql_real_escape_string($caption);
-	$description = mysql_real_escape_string($description);
+	$caption = mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$caption);
+	$description = mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$description);
 	$allow_comments = intval($allow_comments);
 	$query = "UPDATE ".PLOGGER_TABLE_PREFIX."pictures SET
 			caption = '$caption',
 			description = '$description',
 			allow_comments = '$allow_comments'
 		WHERE id='$id'";
-	$result = mysql_query($query);
+	$result = mysqli_query($GLOBALS["PLOGGER_DBH"],$query);
 	if ($result) {
 		return array('output' => plog_tr('You have successfully modified the selected picture.'));
 	} else {
-		return array('errors' => mysql_error());
+		return array('errors' => mysqli_error($GLOBALS["PLOGGER_DBH"]));
 	}
 }
 
@@ -382,11 +382,11 @@ function update_picture_field($picture_id, $field, $value) {
 	$errors = $output = '';
 
 	$picture_id = intval($picture_id);
-	$value = mysql_real_escape_string(trim($value));
+	$value = mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],trim($value));
 
 	$query = "UPDATE ".PLOGGER_TABLE_PREFIX."pictures SET $field = '$value' WHERE id='$picture_id'";
 
-	$result = mysql_query($query);
+	$result = mysqli_query($GLOBALS["PLOGGER_DBH"],$query);
 	if ($result) {
 		return array('output' => plog_tr('You have successfully modified the selected picture.'));
 	} else {
@@ -403,7 +403,7 @@ function move_picture($pic_id, $to_album) {
 
 	$query = "SELECT * FROM ".PLOGGER_TABLE_PREFIX."albums WHERE `id` = '".$to_album."'";
 	$result = run_query($query);
-	$row = mysql_fetch_assoc($result);
+	$row = mysqli_fetch_assoc($result);
 
 	if (!is_array($row)) {
 		return array('errors' => sprintf(plog_tr('There is no album with id %s.'), '<strong>'.$to_album.'</strong>'));
@@ -470,12 +470,12 @@ function move_picture($pic_id, $to_album) {
 
 	// Update database
 	$sql = "UPDATE ".PLOGGER_TABLE_PREFIX."pictures SET
-			path = '".mysql_real_escape_string($picture_path)."',
+			path = '".mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$picture_path)."',
 			parent_album = '".$to_album."',
 			parent_collection = '".$new_collection."'
 		WHERE id = '".$pic_id."'";
-	if (!mysql_query($sql)) {
-		return array('errors' => mysql_error());
+	if (!mysqli_query($GLOBALS["PLOGGER_DBH"],$sql)) {
+		return array('errors' => mysqli_error($GLOBALS["PLOGGER_DBH"]));
 	}
 	return array('output' => plog_tr('Success'));
 }
@@ -570,12 +570,12 @@ function add_collection($collection_name, $description) {
 	if (!makeDirs($create_path)) {
 		$errors .= sprintf(plog_tr('Could not create directory %s!'), '<strong>'.$create_path.'</strong>');
 	} else {
-		$sql_name = mysql_real_escape_string($collection_name);
-		$description = mysql_real_escape_string($description);
-		$collection_folder = mysql_real_escape_string($collection_folder);
+		$sql_name = mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$collection_name);
+		$description = mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$description);
+		$collection_folder = mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$collection_folder);
 		$query = "INSERT INTO ".PLOGGER_TABLE_PREFIX."collections (`name`,`description`,`path`) VALUES ('$sql_name', '$description', '$collection_folder')";
 		$result = run_query($query);
-		$id = mysql_insert_id();
+		$id = mysqli_insert_id($GLOBALS["PLOGGER_DBH"]);
 
 		$output .= sprintf(plog_tr('You have successfully created the collection %s.'), '<strong>'.$collection_name.'</strong>');
 	}
@@ -609,8 +609,8 @@ function update_collection($collection_id, $name, $description, $thumbnail_id = 
 	$collection_id = intval($collection_id);
 	$thumbnail_id = intval($thumbnail_id);
 
-	$name = mysql_real_escape_string($name);
-	$description = mysql_real_escape_string($description);
+	$name = mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$name);
+	$description = mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$description);
 
 	// Rename the directory
 	// First, get the collection name of our source collection
@@ -619,7 +619,7 @@ function update_collection($collection_id, $name, $description, $thumbnail_id = 
 			WHERE c.id = '$collection_id'";
 
 	$result = run_query($sql);
-	$row = mysql_fetch_assoc($result);
+	$row = mysqli_fetch_assoc($result);
 
 	$source_collection_name = SmartStripSlashes($row['collection_path']);
 	$source_path = $config['basedir'].'plog-content/images/'.$source_collection_name;
@@ -650,12 +650,12 @@ function update_collection($collection_id, $name, $description, $thumbnail_id = 
 		}
 	}
 
-	$target_name = mysql_real_escape_string($target_name);
+	$target_name = mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$target_name);
 
 	$query = "UPDATE ".PLOGGER_TABLE_PREFIX."collections SET name = '$name', path = '$target_name', description = '$description', thumbnail_id = '$thumbnail_id' WHERE id='$collection_id'";
-	$result = mysql_query($query);
+	$result = mysqli_query($GLOBALS["PLOGGER_DBH"],$query);
 	if (!$result) {
-		return array('errors' => mysql_error());
+		return array('errors' => mysqli_error($GLOBALS["PLOGGER_DBH"]));
 	}
 
 	$output = plog_tr('You have successfully modified the selected collection.');
@@ -670,16 +670,16 @@ function update_collection($collection_id, $name, $description, $thumbnail_id = 
 
 	$result = run_query($sql);
 
-	while($row = mysql_fetch_assoc($result)) {
+	while($row = mysqli_fetch_assoc($result)) {
 
 		$filename = basename($row['path']);
 		$album_path = $row['album_path'];
 
-		$new_path = mysql_real_escape_string(SmartStripSlashes($target_name.'/'.$album_path.'/'.$filename));
+		$new_path = mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],SmartStripSlashes($target_name.'/'.$album_path.'/'.$filename));
 
 		// Update database
 		$sql = "UPDATE ".PLOGGER_TABLE_PREFIX."pictures SET path = '$new_path' WHERE id = '$row[id]'";
-		mysql_query($sql) or ($output .= mysql_error());
+		mysqli_query($GLOBALS["PLOGGER_DBH"],$sql) or ($output .= mysqli_error($GLOBALS["PLOGGER_DBH"]));
 	}
 
 	return array(
@@ -697,11 +697,11 @@ function update_collection_field($collection_id, $field, $value) {
 	$errors = $output = '';
 
 	$collection_id = intval($collection_id);
-	$value = mysql_real_escape_string(trim($value));
+	$value = mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],trim($value));
 
 	$query = "UPDATE ".PLOGGER_TABLE_PREFIX."collections SET $field = '$value' WHERE id='$collection_id'";
 
-	$result = mysql_query($query);
+	$result = mysqli_query($GLOBALS["PLOGGER_DBH"],$query);
 	if ($result) {
 		return array('output' => plog_tr('You have successfully modified the selected collection.'));
 	} else {
@@ -717,7 +717,7 @@ function delete_collection($del_id) {
 		WHERE c.id = '$del_id'";
 
 	$result = run_query($sql);
-	$collection = mysql_fetch_assoc($result);
+	$collection = mysqli_fetch_assoc($result);
 
 	if (!$collection) {
 		return array('errors' => plog_tr('No such collection.'));
@@ -726,7 +726,7 @@ function delete_collection($del_id) {
 	// First delete all albums registered with this album
 	$sql = 'SELECT * FROM '.PLOGGER_TABLE_PREFIX.'albums WHERE parent_id = '.$collection['collection_id'];
 	$result = run_query($sql);
-	while ($row = mysql_fetch_assoc($result)) {
+	while ($row = mysqli_fetch_assoc($result)) {
 		delete_album($row['id']);
 	}
 
@@ -768,7 +768,7 @@ function add_album($album_name, $description, $pid) {
 	$query = "SELECT c.path as collection_path FROM ". PLOGGER_TABLE_PREFIX."collections c WHERE id = '$pid'";
 
 	$result = run_query($query);
-	$row = mysql_fetch_assoc($result);
+	$row = mysqli_fetch_assoc($result);
 
 	// This shouldn't happen
 	if (empty($row)) {
@@ -800,12 +800,12 @@ function add_album($album_name, $description, $pid) {
 	if (!makeDirs($create_path)) {
 		$errors .= sprintf(plog_tr('Could not create directory %s!'), '<strong>'.$path.'</strong>');
 	} else {
-		$sql_name = mysql_real_escape_string($album_name);
-		$description = mysql_real_escape_string($description);
-		$album_folder = mysql_real_escape_string($album_folder);
+		$sql_name = mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$album_name);
+		$description = mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$description);
+		$album_folder = mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$album_folder);
 		$query = "INSERT INTO ".PLOGGER_TABLE_PREFIX."albums (`name`,`description`,`parent_id`,`path`) VALUES ('$sql_name', '$description', '$pid', '$album_folder')";
 		$result = run_query($query);
-		$id = mysql_insert_id();
+		$id = mysqli_insert_id($GLOBALS["PLOGGER_DBH"]);
 
 		$output .= sprintf(plog_tr('You have successfully created the album %s.'), '<strong>'.$album_name.'</strong>');
 	}
@@ -826,8 +826,8 @@ function update_album($album_id, $name, $description, $thumbnail_id = 0) {
 
 	$album_id = intval($album_id);
 	$thumbnail_id = intval($thumbnail_id);
-	$name = mysql_real_escape_string(SmartStripSlashes(trim($name)));
-	$description = mysql_real_escape_string(SmartStripSlashes($description));
+	$name = mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],SmartStripSlashes(trim($name)));
+	$description = mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],SmartStripSlashes($description));
 	if (empty($name)) {
 		return array('errors' => plog_tr('Please enter a valid name for the album.'));
 	}
@@ -840,7 +840,7 @@ function update_album($album_id, $name, $description, $thumbnail_id = 0) {
 			WHERE c.id = a.parent_id AND a.id = ".$album_id;
 
 	$result = run_query($sql);
-	$row = mysql_fetch_assoc($result);
+	$row = mysqli_fetch_assoc($result);
 
 	$source_album_name = SmartStripSlashes($row['album_path']);
 	$source_collection_name = SmartStripSlashes($row['collection_path']);
@@ -873,7 +873,7 @@ function update_album($album_id, $name, $description, $thumbnail_id = 0) {
 		}
 	}
 
-	$target_name = mysql_real_escape_string($target_name);
+	$target_name = mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$target_name);
 
 	// Proceed only if rename succeeded
 	$query = "UPDATE ".PLOGGER_TABLE_PREFIX."albums SET
@@ -883,9 +883,9 @@ function update_album($album_id, $name, $description, $thumbnail_id = 0) {
 			path = '$target_name'
 		WHERE id='$album_id'";
 
-	$result = mysql_query($query);
+	$result = mysqli_query($GLOBALS["PLOGGER_DBH"],$query);
 	if (!$result) {
-		return array('errors' => mysql_error());
+		return array('errors' => mysqli_error($GLOBALS["PLOGGER_DBH"]));
 	}
 
 	$output .= plog_tr('You have successfully modified the selected album.');
@@ -897,14 +897,14 @@ function update_album($album_id, $name, $description, $thumbnail_id = 0) {
 
 	$result = run_query($sql);
 
-	while($row = mysql_fetch_assoc($result)) {
+	while($row = mysqli_fetch_assoc($result)) {
 
 		$filename = basename($row['path']);
-		$new_path = mysql_real_escape_string(SmartStripSlashes($source_collection_name.'/'.$target_name.'/'.$filename));
+		$new_path = mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],SmartStripSlashes($source_collection_name.'/'.$target_name.'/'.$filename));
 
 		// Update database
 		$sql = "UPDATE ".PLOGGER_TABLE_PREFIX."pictures SET path = '$new_path' WHERE id = '$row[id]'";
-		mysql_query($sql) or ($errors .= mysql_error());
+		mysqli_query($GLOBALS["PLOGGER_DBH"],$sql) or ($errors .= mysqli_error($GLOBALS["PLOGGER_DBH"]));
 	}
 
 	return array(
@@ -919,7 +919,7 @@ function update_album_field($album_id, $field, $value) {
 		return array('errors' => plog_tr('Invalid action'));
 	}
 
-	$value = mysql_real_escape_string(trim(SmartStripSlashes($value)));
+	$value = mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],trim(SmartStripSlashes($value)));
 	$errors = $output = '';
 	$album_id = intval($album_id);
 
@@ -928,7 +928,7 @@ function update_album_field($album_id, $field, $value) {
 			$field = '$value'
 		WHERE id='$album_id'";
 
-	$result = mysql_query($query);
+	$result = mysqli_query($GLOBALS["PLOGGER_DBH"],$query);
 
 	if ($result) {
 		return array('output' => plog_tr('You have successfully modified the selected album.'));
@@ -957,7 +957,7 @@ function move_album($album_id, $to_collection) {
 			WHERE c.id = a.parent_id AND a.id = '$album_id'";
 
 	$result = run_query($sql);
-	$row = mysql_fetch_assoc($result);
+	$row = mysqli_fetch_assoc($result);
 
 	$source_album_name = SmartStripSlashes($row['album_path']);
 	$source_collection_name = SmartStripSlashes($row['collection_path']);
@@ -973,7 +973,7 @@ function move_album($album_id, $to_collection) {
 	$sql = "SELECT c.path as collection_path FROM ".PLOGGER_TABLE_PREFIX."collections c WHERE c.id = '$to_collection'";
 
 	$result = run_query($sql);
-	$row = mysql_fetch_assoc($result);
+	$row = mysqli_fetch_assoc($result);
 
 	$target_collection_name = SmartStripSlashes($row['collection_path']);
 	$source_path = $config['basedir'].'plog-content/images/'.$source_collection_name.'/'.$source_album_name.'/';
@@ -1009,7 +1009,7 @@ function move_album($album_id, $to_collection) {
 	$result = run_query($sql);
 	$pic_ids = array();
 
-	while($row = mysql_fetch_assoc($result)) {
+	while($row = mysqli_fetch_assoc($result)) {
 		$filename = SmartStripSlashes(basename($row['path']));
 		$pic_ids[] = $row['picture_id'];
 		$old_path = $source_path.$filename;
@@ -1021,13 +1021,13 @@ function move_album($album_id, $to_collection) {
 			@chmod($new_path, PLOGGER_CHMOD_FILE);
 		}
 
-		$path_insert = mysql_real_escape_string($target_collection_name.'/'.$source_album_name.'/'.$filename);
+		$path_insert = mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$target_collection_name.'/'.$source_album_name.'/'.$filename);
 
 		$sql = "UPDATE ".PLOGGER_TABLE_PREFIX."pictures SET
 				parent_collection = '$to_collection',
 				path = '$path_insert'
 			WHERE id = '$row[picture_id]'";
-		mysql_query($sql) or ($res['errors'] .= mysql_error());
+		mysqli_query($GLOBALS["PLOGGER_DBH"],$sql) or ($res['errors'] .= mysqli_error($GLOBALS["PLOGGER_DBH"]));
 	}
 
 	// Check if collection thumbnail = picture moved to different collection and set to default if so
@@ -1058,7 +1058,7 @@ function delete_album($del_id) {
 		WHERE c.id = a.parent_id AND a.id = '$del_id'";
 
 	$result = run_query($sql);
-	$album = mysql_fetch_assoc($result);
+	$album = mysqli_fetch_assoc($result);
 
 	if (!$album) {
 		return array('errors' => plog_tr('No such album'));
@@ -1067,7 +1067,7 @@ function delete_album($del_id) {
 	// First delete all pictures registered with this album
 	$sql = 'SELECT * FROM '.PLOGGER_TABLE_PREFIX.'pictures WHERE parent_album = '.$album['album_id'];
 	$result = run_query($sql);
-	while ($row = mysql_fetch_assoc($result)) {
+	while ($row = mysqli_fetch_assoc($result)) {
 		delete_picture($row['id']);
 	}
 
@@ -1101,13 +1101,13 @@ function delete_album($del_id) {
 
 function update_comment($id, $author, $email, $url, $comment) {
 	$id = intval($id);
-	$author = mysql_real_escape_string($author);
-	$email = mysql_real_escape_string($email);
-	$url = mysql_real_escape_string($url);
-	$comment = mysql_real_escape_string(trim($comment));
+	$author = mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$author);
+	$email = mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$email);
+	$url = mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$url);
+	$comment = mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],trim($comment));
 
 	$query = "UPDATE ".PLOGGER_TABLE_PREFIX."comments SET author = '$author', comment = '$comment', url = '$url', email = '$email' WHERE id='$id'";
-	$result = mysql_query($query);
+	$result = mysqli_query($GLOBALS["PLOGGER_DBH"],$query);
 	if ($result) {
 		return array('output' => plog_tr('You have successfully modified the selected comment.'));
 	} else {
@@ -1122,10 +1122,10 @@ function update_comment_field($id, $field, $value) {
 	}
 
 	$id = intval($id);
-	$value = mysql_real_escape_string($value);
+	$value = mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$value);
 
 	$query = "UPDATE ".PLOGGER_TABLE_PREFIX."comments SET $field = '$value' WHERE id='$id'";
-	$result = mysql_query($query);
+	$result = mysqli_query($GLOBALS["PLOGGER_DBH"],$query);
 	if ($result) {
 		return array('output' => plog_tr('You have successfully modified the selected comment.'));
 	} else {
@@ -1140,7 +1140,7 @@ function count_albums($parent_id = 0) {
 		$numquery = "SELECT COUNT(*) AS `num_albums` FROM `".PLOGGER_TABLE_PREFIX."albums` WHERE parent_id = '$parent_id'";
 
 	$numresult = run_query($numquery);
-	$num_albums = mysql_result($numresult, 0, 'num_albums');
+	$num_albums = mysqli_result($numresult, 0, 'num_albums');
 	return $num_albums;
 }
 
@@ -1149,7 +1149,7 @@ function count_collections() {
 	$numquery = "SELECT COUNT(*) AS `num_collections` FROM `".PLOGGER_TABLE_PREFIX."collections`";
 
 	$numresult = run_query($numquery);
-	$num_albums = mysql_result($numresult, 0, 'num_collections');
+	$num_albums = mysqli_result($numresult, 0, 'num_collections');
 	return $num_albums;
 }
 
@@ -1160,7 +1160,7 @@ function count_pictures($parent_id = 0) {
 		$numquery = "SELECT COUNT(*) AS `num_pics` FROM `".PLOGGER_TABLE_PREFIX."pictures` WHERE parent_album = '$parent_id'";
 
 	$numresult = run_query($numquery);
-	$num_pics = mysql_result($numresult, 0, 'num_pics');
+	$num_pics = mysqli_result($numresult, 0, 'num_pics');
 	return $num_pics;
 }
 
@@ -1171,7 +1171,7 @@ function count_comments($parent_id = false) {
 	}
 
 	$numresult = run_query($numquery);
-	$num_comments = mysql_result($numresult, 0, 'num_comments');
+	$num_comments = mysqli_result($numresult, 0, 'num_comments');
 	return $num_comments;
 }
 
@@ -1180,7 +1180,7 @@ function plog_edit_comment_form($comment_id) {
 	$comment_id = intval($comment_id);
 	$sql = "SELECT * FROM ".PLOGGER_TABLE_PREFIX."comments c WHERE c.id = '$comment_id'";
 	$result = run_query($sql);
-	$comment = mysql_fetch_assoc($result);
+	$comment = mysqli_fetch_assoc($result);
 	if (!is_array($comment)) {
 		// XXX: return an error message instead
 		return false;
@@ -1530,7 +1530,7 @@ function plog_edit_collection_form($collection_id) {
 			ORDER BY a.name, p.date_submitted";
 
 	$result = run_query($sql);
-	while($row = mysql_fetch_assoc($result)) {
+	while($row = mysqli_fetch_assoc($result)) {
 		$selected = ($row['id'] == $collection['thumbnail_id']) ? ' selected="selected"' : '';
 		$style = 'class="thumboption" style="padding-left: '.($thumbnail_config[THUMB_SMALL]['size'] + 5).'px; background-image: url('.generate_thumb(SmartStripSlashes($row['path']), $row['id']).');"';
 
@@ -1582,7 +1582,7 @@ function plog_edit_album_form($album_id) {
 	$sql = "SELECT id, caption, path FROM ".PLOGGER_TABLE_PREFIX."pictures p WHERE p.parent_album = '".$album_id."'";
 
 	$result = run_query($sql);
-	while($row = mysql_fetch_assoc($result)) {
+	while($row = mysqli_fetch_assoc($result)) {
 			$selected = ($row['id'] == $album['thumbnail_id']) ? ' selected="selected"' : '';
 			$style = 'class="thumboption" style="padding-left: '.($thumbnail_config[THUMB_SMALL]['size'] + 5).'px; background-image: url('.generate_thumb(SmartStripSlashes($row['path']), $row['id']).');"';
 			$images .= "\n\t\t\t\t" . '<option '.$style.' value="'.$row['id'].'"'.$selected.'>';
@@ -1974,7 +1974,7 @@ function plogger_generate_server_info() {
 
 		$server_data .= "\n\t\t\t" . '<strong>'.plog_tr('Server Software').':</strong> '.$software_type.'/'.$software_version.' '.$software_distro.'<br />
 			<strong>'.plog_tr('PHP Version').':</strong> '.phpversion().' ('.strtoupper(php_sapi_name()).')<br />
-			<strong>'.plog_tr('MySQL Version').':</strong> '.mysql_get_server_info().'<br />
+			<strong>'.plog_tr('MySQL Version').':</strong> '.mysqli_get_server_info($GLOBALS["PLOGGER_DBH"]).'<br />
 			<strong>'.plog_tr('GD Version').':</strong>';
 
 /* Thanks to the Pixelpost Crew for the gd_info code below */

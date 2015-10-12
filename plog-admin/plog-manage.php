@@ -64,7 +64,7 @@ function generate_breadcrumb_admin($level, $id = 0) {
 		case 'comments':
 			$query = "SELECT * FROM `".PLOGGER_TABLE_PREFIX."pictures` WHERE `id`='".$id."'";
 			$result = run_query($query);
-			$row = mysql_fetch_assoc($result);
+			$row = mysqli_fetch_assoc($result);
 
 			$picture_link = '<strong>'.SmartStripSlashes(basename($row['path'])).'</strong>';
 			$album_id = $row['parent_album'];
@@ -72,13 +72,13 @@ function generate_breadcrumb_admin($level, $id = 0) {
 
 			$query = "SELECT * FROM `".PLOGGER_TABLE_PREFIX."albums` WHERE `id`='".$album_id."'";
 			$result = run_query($query);
-			$row = mysql_fetch_assoc($result);
+			$row = mysqli_fetch_assoc($result);
 
 			$album_link = '<a href="'.$_SERVER['PHP_SELF'].'?level=pictures&amp;id='.$album_id.'">'.SmartStripSlashes($row['name']).'</a>';
 
 			$query = "SELECT * FROM `".PLOGGER_TABLE_PREFIX."collections` WHERE `id`='".$collection_id."'";
 			$result = run_query($query);
-			$row = mysql_fetch_assoc($result);
+			$row = mysqli_fetch_assoc($result);
 
 			$collection_link = '<a href="'.$_SERVER['PHP_SELF'].'?level=albums&amp;id='.$collection_id.'">'.SmartStripSlashes($row['name']).'</a>';
 
@@ -307,8 +307,8 @@ if (!isset($edit_page)) {
 
 	// Let's generate the pagination menu as well
 	$recordCount = "SELECT COUNT(*) AS num_items FROM ".PLOGGER_TABLE_PREFIX."$level $cond";
-	$totalRowsResult = mysql_query($recordCount);
-	$totalRows = mysql_result($totalRowsResult, 0, 'num_items');
+	$totalRowsResult = mysqli_query($GLOBALS["PLOGGER_DBH"],$recordCount);
+	$totalRows = mysqli_result($totalRowsResult, 0, 'num_items');
 
 	$pagination_menu = "\n\t\t" . '<div class="entries-page">'.generate_pagination_view_menu().'
 		</div><!-- /entries-page -->

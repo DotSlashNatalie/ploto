@@ -33,35 +33,35 @@ if (isset($_POST['submit'])) {
 	// Update general settings
 	$query = "UPDATE `".PLOGGER_TABLE_PREFIX."config` SET
 	`truncate`= '".intval($_POST['truncate'])."',
-	`feed_title`= '".mysql_real_escape_string($_POST['feed_title'])."',
+	`feed_title`= '".mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$_POST['feed_title'])."',
 	`feed_content` = '".intval($_POST['rss_content'])."',
 	`feed_num_entries`= '".intval($_POST['feed_num_entries'])."',
 	`allow_dl`= '".intval($allow_dl)."',
 	`allow_comments`= '".intval($allow_comments)."',
 	`allow_print`= '".intval($allow_print)."',
-	`default_sortby`= '".mysql_real_escape_string($_POST['default_sortby'])."',
-	`default_sortdir`= '".mysql_real_escape_string($_POST['default_sortdir'])."',
-	`album_sortby`= '".mysql_real_escape_string($_POST['album_sortby'])."',
-	`album_sortdir`= '".mysql_real_escape_string($_POST['album_sortdir'])."',
-	`collection_sortby`= '".mysql_real_escape_string($_POST['collection_sortby'])."',
-	`collection_sortdir`= '".mysql_real_escape_string($_POST['collection_sortdir'])."',
+	`default_sortby`= '".mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$_POST['default_sortby'])."',
+	`default_sortdir`= '".mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$_POST['default_sortdir'])."',
+	`album_sortby`= '".mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$_POST['album_sortby'])."',
+	`album_sortdir`= '".mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$_POST['album_sortdir'])."',
+	`collection_sortby`= '".mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$_POST['collection_sortby'])."',
+	`collection_sortdir`= '".mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$_POST['collection_sortdir'])."',
 	`thumb_num`= '".intval($_POST['thumb_num'])."',
 	`compression`= '".intval($_POST['image_quality'])."',
-	`admin_username`= '".mysql_real_escape_string($_POST['admin_username'])."',
-	`admin_email`= '".mysql_real_escape_string($_POST['admin_email'])."',
-	`date_format`= '".mysql_real_escape_string($_POST['date_format'])."',
+	`admin_username`= '".mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$_POST['admin_username'])."',
+	`admin_email`= '".mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$_POST['admin_email'])."',
+	`date_format`= '".mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$_POST['date_format'])."',
 	`use_mod_rewrite`= '".intval($use_mod_rewrite)."',
 	`comments_notify`= '".intval($comments_notify)."',
 	`comments_moderate`= '".intval($comments_moderate)."',
-	`gallery_url`= '".mysql_real_escape_string($_POST['gallery_url'])."',
-	`gallery_name`= '".mysql_real_escape_string($_POST['gallery_name'])."',
+	`gallery_url`= '".mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$_POST['gallery_url'])."',
+	`gallery_name`= '".mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$_POST['gallery_name'])."',
 	`thumb_nav_range`= '".intval($_POST['thumb_nav_range'])."',
 	`allow_fullpic`= '".intval($allow_fullpic)."'";
 
 	// Update password if set and passwords match
 	if (trim($_POST['admin_password']) != '') {
 		if (trim($_POST['admin_password']) == trim($_POST['confirm_admin_password'])) {
-			$query .= ", `admin_password`= '".md5(mysql_real_escape_string(trim($_POST['admin_password'])))."'";
+			$query .= ", `admin_password`= '".md5(mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],trim($_POST['admin_password'])))."'";
 		} else {
 			$error_flag = true;
 			$output .= '<p class="errors">'.plog_tr('The passwords you entered did not match').'.</p>';

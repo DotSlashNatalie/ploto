@@ -101,7 +101,7 @@ function generate_RSS_feed ($level, $id, $search = '') {
 
 		$sql = "SELECT UNIX_TIMESTAMP(`date_modified`) AS `pubdate` FROM `".PLOGGER_TABLE_PREFIX."pictures` WHERE `parent_album` = '".plogger_get_album_id()."' ORDER BY `date_modified` DESC LIMIT 1";
 		$result = run_query($sql);
-		$row = mysql_fetch_assoc($result);
+		$row = mysqli_fetch_assoc($result);
 		$pubdate = date('D, d M Y H:i:s O', $row['pubdate']);
 
 		$title = plogger_get_album_name();

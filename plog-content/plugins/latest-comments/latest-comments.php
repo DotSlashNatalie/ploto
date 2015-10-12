@@ -49,17 +49,17 @@ $plog_lc_comment_trim = '100';
 /* The database query to pull the latest comments from the database */
 $plog_lc_query = "SELECT * FROM ".PLOGGER_TABLE_PREFIX."comments WHERE `approved` = 1 ORDER BY `id` DESC LIMIT $plog_lc_amount";
 
-$plog_lc_result = mysql_query($plog_lc_query) or die ("Could not execute query: $plog_lc_query." .mysql_error());
+$plog_lc_result = mysqli_query($GLOBALS["PLOGGER_DBH"],$plog_lc_query) or die ("Could not execute query: $plog_lc_query." .mysqli_error($GLOBALS["PLOGGER_DBH"]));
 
 /* Start html output */
 
-if (mysql_num_rows($plog_lc_result) > 0) {
+if (mysqli_num_rows($plog_lc_result) > 0) {
 	echo "\n\t" . '<ul class="latest-comments">';
 
 $config['baseurl'] = $plog_lc_site_url;
 
 /* The latest comments loop */
-	while ($row = mysql_fetch_array($plog_lc_result)) {
+	while ($row = mysqli_fetch_array($plog_lc_result)) {
 		$id = $row['id'];
 		$parent_id = $row['parent_id'];
 		$author = $row['author'];

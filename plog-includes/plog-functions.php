@@ -5,6 +5,18 @@ if (basename($_SERVER['PHP_SELF']) == basename( __FILE__ )) {
 	exit();
 }
 
+function mysqli_result($res,$row=0,$col=0){ 
+    $numrows = mysqli_num_rows($res); 
+    if ($numrows && $row <= ($numrows-1) && $row >=0){
+        mysqli_data_seek($res,$row);
+        $resrow = (is_numeric($col)) ? mysqli_fetch_row($res) : mysqli_fetch_assoc($res);
+        if (isset($resrow[$col])){
+            return $resrow[$col];
+        }
+    }
+    return false;
+}
+
 function generate_password($low = 5, $high = 8) {
 	$salt = md5(time().crypt('abcdefghkmnpqrstuvwxyz23456789'));
 	$src = preg_split('//', $salt, -1, PREG_SPLIT_NO_EMPTY);
@@ -199,7 +211,7 @@ function generate_jump_menu() {
 	GROUP BY `parent_album`";
 	$result = run_query($sql);
 
-	while($row = mysql_fetch_assoc($result)) {
+	while($row = mysqli_fetch_assoc($result)) {
 		$image_count[$row['parent_album']] = $row['imagecount'];
 	}
 
@@ -216,7 +228,7 @@ function generate_jump_menu() {
 
 	$last_collection = '';
 
-	while ($row = mysql_fetch_assoc($result)) {
+	while ($row = mysqli_fetch_assoc($result)) {
 		// skip albums with no images
 		if (empty($image_count[$row['album_id']])) {
 			continue;
@@ -239,8 +251,8 @@ function generate_exif_table($id) {
 	global $config;
 	$query = "SELECT * FROM `".PLOGGER_TABLE_PREFIX."pictures` WHERE `id`=".intval($id);
 	$result = run_query($query);
-	if (mysql_num_rows($result) > 0) {
-		$row = mysql_fetch_assoc($result);
+	if (mysqli_num_rows($result) > 0) {
+		$row = mysqli_fetch_assoc($result);
 		foreach($row as $key => $val) if (trim($row[$key]) == '') $row[$key] = '&nbsp;';
 		// get image size
 		$img = $config['basedir'].'plog-content/images/'.SmartStripSlashes($row['path']);
@@ -482,12 +494,12 @@ function is_plogger_installed() {
 		$mysql = check_mysql(PLOGGER_DB_HOST, PLOGGER_DB_USER, PLOGGER_DB_PW, PLOGGER_DB_NAME);
 		if (empty($mysql)) {
 			$sql = "DESCRIBE `".PLOGGER_TABLE_PREFIX."config`";
-			$result = mysql_query($sql);
+			$result = mysqli_query($GLOBALS["PLOGGER_DBH"],$sql);
 			if ($result) {
 				$installed = true;
 				$config_sql = "SELECT * FROM `".PLOGGER_TABLE_PREFIX."config`";
-				$config_result = mysql_query($config_sql);
-				$config = mysql_fetch_assoc($config_result);
+				$config_result = mysqli_query($GLOBALS["PLOGGER_DBH"],$config_sql);
+				$config = mysqli_fetch_assoc($config_result);
 			}
 		}
 	}
@@ -497,15 +509,16 @@ function is_plogger_installed() {
 function check_mysql($host, $user, $pass, $database) {
 	$errors = array();
 	if (function_exists('mysql_connect')) {
-		$connection = @mysql_connect($host, $user, $pass);
+		$connection = @mysqli_connect($host, $user, $pass);
 		if (!$connection) {
-			$errors[] = plog_tr('Cannot connect to MySQL with the information provided. MySQL error: ').mysql_error();
+			$errors[] = plog_tr('Cannot connect to MySQL with the information provided. MySQL error: ').mysqli_error($GLOBALS["PLOGGER_DBH"]);
 		}
 	}
-	$select = @mysql_select_db($database);
-	if (!$select) {
-		$errors[] = sprintf(plog_tr('Cannot find the database %s. MySQL error: '), '<strong>'.$database.'</strong>').mysql_error();
+	$select = @mysqli_select_db($GLOBALS["PLOGGER_DBH"],$database);
+	if ($select === false) {
+		$errors[] = sprintf(plog_tr('Cannot find the database %s. MySQL error: '), '<strong>'.$database.'</strong>').mysqli_error($GLOBALS["PLOGGER_DBH"]);
 	}
+	connect_db();
 	return $errors;
 }
 
@@ -513,15 +526,15 @@ function connect_db() {
 	global $config, $PLOGGER_DBH;
 
 	if (!isset($PLOGGER_DBH)) {
-		$PLOGGER_DBH = mysql_connect(PLOGGER_DB_HOST, PLOGGER_DB_USER, PLOGGER_DB_PW) or die(plog_tr('Plogger cannot connect to the database because: ').mysql_error());
+		$PLOGGER_DBH = mysqli_connect(PLOGGER_DB_HOST, PLOGGER_DB_USER, PLOGGER_DB_PW) or die(plog_tr('Plogger cannot connect to the database because: ').mysqli_error($GLOBALS["PLOGGER_DBH"]));
 
-		mysql_select_db(PLOGGER_DB_NAME);
+		mysqli_select_db($GLOBALS["PLOGGER_DBH"],PLOGGER_DB_NAME);
 
-		$mysql_version = mysql_get_server_info();
+		$mysql_version = mysqli_get_server_info($GLOBALS["PLOGGER_DBH"]);
 		$mysql_charset_support = '4.1';
 
 		if (1 == version_compare($mysql_version, $mysql_charset_support)) {
-			mysql_query('SET NAMES utf8');
+			mysqli_query($GLOBALS["PLOGGER_DBH"],'SET NAMES utf8');
 		}
 	}
 
@@ -531,7 +544,7 @@ function close_db() {
 	global $PLOGGER_DBH;
 
 	if (isset($PLOGGER_DBH)) {
-		mysql_close($PLOGGER_DBH);
+		mysqli_close($PLOGGER_DBH);
 	}
 }
 
@@ -543,12 +556,12 @@ function run_query($query) {
 		$GLOBALS['queries'][] = $query;
 	}
 
-	$result = @mysql_query($query, $PLOGGER_DBH);
-
+	$result = @mysqli_query($GLOBALS["PLOGGER_DBH"],$query);
+	
 	if (!$result) {
 		$trace = debug_backtrace();
 
-		die(mysql_error($PLOGGER_DBH).'<br /><br />' .
+		die(mysqli_error($PLOGGER_DBH).'<br /><br />' .
 		$query.'<br /><br />
 		In file: '.$_SERVER['PHP_SELF'].'<br /><br />
 		On line: '.$trace[0]['line']);
@@ -566,7 +579,7 @@ function get_active_collections_albums() {
 
 	$sql = "SELECT parent_collection, parent_album FROM `".PLOGGER_TABLE_PREFIX."pictures` GROUP BY parent_collection, parent_album";
 	$result = run_query($sql);
-	while($row = mysql_fetch_assoc($result)) {
+	while($row = mysqli_fetch_assoc($result)) {
 		$image_collection_count[$row['parent_collection']] = 1;
 		$image_album_count[$row['parent_album']] = 1;
 	}
@@ -742,7 +755,7 @@ function generate_thumb($path, $prefix, $type = THUMB_SMALL) {
 function check_picture_id($id) {
 	$sql = "SELECT `parent_album` FROM ".PLOGGER_TABLE_PREFIX."pictures WHERE `id` = ".intval($id);
 	$result = run_query($sql);
-	if (mysql_num_rows($result) > 0) {
+	if (mysqli_num_rows($result) > 0) {
 		return true;
 	} else {
 		$GLOBALS['plogger_level'] = '404';
@@ -777,14 +790,14 @@ function get_picture_by_id($id, $album_id = null) {
 
 	$resultPicture = run_query($sql);
 
-	if (is_array($id) && mysql_num_rows($resultPicture) > 0) {
+	if (is_array($id) && mysqli_num_rows($resultPicture) > 0) {
 		$picdata = array();
-		while ($row = mysql_fetch_assoc($resultPicture)) {
+		while ($row = mysqli_fetch_assoc($resultPicture)) {
 			$row['url'] = $config['gallery_url'].'plog-content/images/'.$row['collection_path'].'/'.$row['album_path'].'/'.basename($row['path']);
 			array_unshift($picdata, $row);
 		}
-	} elseif (!is_array($id) && mysql_num_rows($resultPicture) > 0) {
-		$picdata = mysql_fetch_assoc($resultPicture);
+	} elseif (!is_array($id) && mysqli_num_rows($resultPicture) > 0) {
+		$picdata = mysqli_fetch_assoc($resultPicture);
 
 		// Eventually I want to get rid of the full path in pictures tables to avoid useless data duplication
 		// The following is a temporary solution so I don't have to break all the functionality at once
@@ -824,7 +837,7 @@ function get_pictures($album_id, $order = 'alpha', $sort = 'DESC') {
 
 	$pictures = array();
 
-	while ($row = mysql_fetch_assoc($result)) {
+	while ($row = mysqli_fetch_assoc($result)) {
 		// See comment in get_picture_by_id
 		$row['url'] = $config['gallery_url'].'plog-content/images/'.$row['collection_path'].'/'.$row['album_path'].'/'.basename($row['path']);
 		$pictures[$row['id']] = $row;
@@ -836,8 +849,8 @@ function get_pictures($album_id, $order = 'alpha', $sort = 'DESC') {
 function check_album_id($id) {
 	$sql = "SELECT * FROM ".PLOGGER_TABLE_PREFIX."albums WHERE `id` = ".intval($id);
 	$result = run_query($sql);
-	if (mysql_num_rows($result) > 0) {
-		$GLOBALS['current_album'] = mysql_fetch_assoc($result);
+	if (mysqli_num_rows($result) > 0) {
+		$GLOBALS['current_album'] = mysqli_fetch_assoc($result);
 		return true;
 	} else {
 		$GLOBALS['plogger_level'] = '404';
@@ -860,8 +873,8 @@ function get_album_by_id($id) {
 	WHERE `a`.`id` = ".intval($id);
 	$result = run_query($sql);
 
-	if (mysql_num_rows($result) > 0) {
-		$album = mysql_fetch_assoc($result);
+	if (mysqli_num_rows($result) > 0) {
+		$album = mysqli_fetch_assoc($result);
 
 		if ($album['thumbnail_id'] == 0) {
 			$query = "SELECT `id`, `path`
@@ -871,8 +884,8 @@ function get_album_by_id($id) {
 			LIMIT 1";
 			$result = run_query($query);
 
-			if (mysql_num_rows($result) > 0) {
-				$row = mysql_fetch_assoc($result);
+			if (mysqli_num_rows($result) > 0) {
+				$row = mysqli_fetch_assoc($result);
 				$album['thumbnail_id'] = $row['id'];
 			}
 		}
@@ -886,11 +899,11 @@ function get_album_by_id($id) {
 function get_album_by_name($name, $collection_id) {
 	$sql = "SELECT *
 	FROM `".PLOGGER_TABLE_PREFIX."albums`
-	WHERE `name` = '".mysql_real_escape_string($name)."'
+	WHERE `name` = '".mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$name)."'
 	AND `parent_id` = ".intval($collection_id);
 	$result = run_query($sql);
-	if (mysql_num_rows($result) > 0) {
-		$album = mysql_fetch_assoc($result);
+	if (mysqli_num_rows($result) > 0) {
+		$album = mysqli_fetch_assoc($result);
 	} else {
 		$album = false;
 	}
@@ -900,8 +913,8 @@ function get_album_by_name($name, $collection_id) {
 function check_collection_id($id) {
 	$sql = "SELECT * FROM ".PLOGGER_TABLE_PREFIX."collections WHERE `id` = ".intval($id);
 	$result = run_query($sql);
-	if (mysql_num_rows($result) > 0) {
-		$GLOBALS['current_collection'] = mysql_fetch_assoc($result);
+	if (mysqli_num_rows($result) > 0) {
+		$GLOBALS['current_collection'] = mysqli_fetch_assoc($result);
 		return true;
 	} else {
 		$GLOBALS['plogger_level'] = '404';
@@ -920,10 +933,10 @@ function get_collection_by_id($id) {
 	ORDER BY `c`.`name` ASC";
 	$resultCollection = run_query($sqlCollection);
 
-	if (mysql_num_rows($resultCollection) == 0) {
+	if (mysqli_num_rows($resultCollection) == 0) {
 		$collection = false;
 	} else {
-		$collection = mysql_fetch_assoc($resultCollection);
+		$collection = mysqli_fetch_assoc($resultCollection);
 
 		if ($collection['thumbnail_id'] == 0) {
 			$query = "SELECT `id`, `path`
@@ -933,8 +946,8 @@ function get_collection_by_id($id) {
 			LIMIT 1";
 			$result = run_query($query);
 
-			if (mysql_num_rows($result) > 0) {
-				$row = mysql_fetch_assoc($result);
+			if (mysqli_num_rows($result) > 0) {
+				$row = mysqli_fetch_assoc($result);
 				$collection['thumbnail_id'] = $row['id'];
 			}
 		}
@@ -946,10 +959,10 @@ function get_collection_by_id($id) {
 function get_collection_by_name($name) {
 	$sql = "SELECT *
 	FROM `".PLOGGER_TABLE_PREFIX."collections`
-	WHERE name = '".mysql_real_escape_string($name)."'";
+	WHERE name = '".mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$name)."'";
 	$result = run_query($sql);
-	if (mysql_num_rows($result) > 0) {
-		$collection = mysql_fetch_assoc($result);
+	if (mysqli_num_rows($result) > 0) {
+		$collection = mysqli_fetch_assoc($result);
 	} else {
 		$collection = false;
 	}
@@ -1008,7 +1021,7 @@ function get_albums($collection_id = null, $sort = 'alpha', $order = 'DESC') {
 
 	$result = run_query($query);
 
-	while ($album = mysql_fetch_assoc($result)) {
+	while ($album = mysqli_fetch_assoc($result)) {
 		if ($album['thumbnail_id'] == 0) {
 			$query = "SELECT `id`, `path`
 			FROM `".PLOGGER_TABLE_PREFIX."pictures`
@@ -1017,8 +1030,8 @@ function get_albums($collection_id = null, $sort = 'alpha', $order = 'DESC') {
 			LIMIT 1";
 			$thumb_result = run_query($query);
 
-			if (mysql_num_rows($thumb_result) > 0) {
-				$row = mysql_fetch_assoc($thumb_result);
+			if (mysqli_num_rows($thumb_result) > 0) {
+				$row = mysqli_fetch_assoc($thumb_result);
 				$album['thumbnail_id'] = $row['id'];
 			}
 		}
@@ -1061,7 +1074,7 @@ function get_collections($sort = 'alpha', $order = 'DESC') {
 
 	$collections = array();
 
-	while ($collection = mysql_fetch_assoc($resultCollection)) {
+	while ($collection = mysqli_fetch_assoc($resultCollection)) {
 		if ($collection['thumbnail_id'] == 0) {
 			$query = "SELECT `id`, `path`
 			FROM `".PLOGGER_TABLE_PREFIX."pictures`
@@ -1070,8 +1083,8 @@ function get_collections($sort = 'alpha', $order = 'DESC') {
 			LIMIT 1";
 			$result = run_query($query);
 
-			if (mysql_num_rows($result) > 0) {
-				$row = mysql_fetch_assoc($result);
+			if (mysqli_num_rows($result) > 0) {
+				$row = mysqli_fetch_assoc($result);
 				$collection['thumbnail_id'] = $row['id'];
 			}
 		}
@@ -1112,7 +1125,7 @@ function resolve_path($str = '') {
 
 	foreach($levels as $key => $level) {
 		if (isset($path_parts[$key])) {
-			$names[$level] = mysql_real_escape_string(urldecode(SmartStripSlashes($path_parts[$key])));
+			$names[$level] = mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],urldecode(SmartStripSlashes($path_parts[$key])));
 			$current_level = $level;
 		}
 	}
@@ -1141,7 +1154,7 @@ function resolve_path($str = '') {
 		$result = run_query($sql);
 
 		// No such collection
-		if (mysql_num_rows($result) == 0) {
+		if (mysqli_num_rows($result) == 0) {
 			// Check if it's an RSS feed
 			if ($names['collection'] == 'feed') {
 				return array('level' => 'collections', 'id' => 0);
@@ -1151,7 +1164,7 @@ function resolve_path($str = '') {
 			}
 		}
 
-		$collection = mysql_fetch_assoc($result);
+		$collection = mysqli_fetch_assoc($result);
 
 		// What if there are multiple collections with same names? I hope there aren't .. this would
 		// suck. But here is an idea, we shouldn't allow the user to enter similar names
@@ -1170,7 +1183,7 @@ function resolve_path($str = '') {
 		$result = run_query($sql);
 
 		// No such album
-		if (mysql_num_rows($result) == 0) {
+		if (mysqli_num_rows($result) == 0) {
 			// Check if it's an RSS feed
 			if ($names['album'] == 'feed') {
 				return array('level' => 'collection', 'id' => $collection['id']);
@@ -1180,7 +1193,7 @@ function resolve_path($str = '') {
 			}
 		}
 
-		$album = mysql_fetch_assoc($result);
+		$album = mysqli_fetch_assoc($result);
 
 		// Try to detect slideshow. Downside is that you cannot have a picture with that name
 		if (isset($names['picture']) && $names['picture'] == 'slideshow') {
@@ -1214,7 +1227,7 @@ function resolve_path($str = '') {
 		AND `parent_album`=".intval($album['id']);
 		$result = run_query($sql);
 
-		$picture = mysql_fetch_assoc($result);
+		$picture = mysqli_fetch_assoc($result);
 
 		// No such caption, perhaps we have better luck with path?
 		if (!$picture) {
@@ -1231,7 +1244,7 @@ function resolve_path($str = '') {
 			WHERE `path` LIKE '".$filepath.".%'
 			AND `parent_album`=".intval($album['id']);
 			$result = run_query($sql);
-			$picture = mysql_fetch_assoc($result);
+			$picture = mysqli_fetch_assoc($result);
 		}
 
 		// No such picture
@@ -1404,12 +1417,11 @@ function generate_url($level, $id = -1, $arg = array(), $plaintext = false) {
 				$args .= $aval.'/';
 			}
 		}
-
 		switch($level) {
 			case 'collection':
 				$query = "SELECT `path` FROM `".PLOGGER_TABLE_PREFIX."collections` WHERE `id`=".intval($id);
 				$result = run_query($query);
-				$row = mysql_fetch_assoc($result);
+				$row = mysqli_fetch_assoc($result);
 				$rv = $config['baseurl'].rawurlencode(SmartStripSlashes($row['path'])).'/'.$args;
 				break;
 			case 'album':
@@ -1420,7 +1432,7 @@ function generate_url($level, $id = -1, $arg = array(), $plaintext = false) {
 				LEFT JOIN `".PLOGGER_TABLE_PREFIX."collections` AS `c` ON `a`.`parent_id`=`c`.`id`
 				WHERE `a`.`id`=".intval($id);
 				$result = run_query($query);
-				$row = mysql_fetch_assoc($result);
+				$row = mysqli_fetch_assoc($result);
 				$rv = $config['baseurl'].rawurlencode(SmartStripSlashes($row['collection_path'])).'/'.rawurlencode(SmartStripSlashes($row['album_path'])).'/'.$args;
 				break;
 			case 'picture':
@@ -1507,11 +1519,11 @@ function add_comment($parent_id, $author, $email, $url, $comment) {
 	$host = gethostbyaddr($ip);
 
 	// I want to use the original unescaped values later - to send the email
-	$sql_author = mysql_real_escape_string($author);
-	$sql_email = mysql_real_escape_string($email);
-	$sql_url = mysql_real_escape_string($url);
-	$sql_comment = mysql_real_escape_string($comment);
-	$sql_ip = mysql_real_escape_string($ip);
+	$sql_author = mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$author);
+	$sql_email = mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$email);
+	$sql_url = mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$url);
+	$sql_comment = mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$comment);
+	$sql_ip = mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$ip);
 
 	$parent_id = intval($parent_id);
 
@@ -1545,10 +1557,10 @@ function add_comment($parent_id, $author, $email, $url, $comment) {
 	`parent_id`= '$parent_id',
 	`approved` = '$approved',
 	`ip` = '$ip'";
-	$result = mysql_query($query);
+	$result = mysqli_query($GLOBALS["PLOGGER_DBH"],$query);
 
 	if (!$result) {
-		return array('errors' => plog_tr('Could not post comment').mysql_error());
+		return array('errors' => plog_tr('Could not post comment').mysqli_error($GLOBALS["PLOGGER_DBH"]));
 	}
 
 	// XXX: admin email address should be validated
@@ -1589,7 +1601,7 @@ function plogger_list_categories($class) {
 	$output = "\n" . '<ul class="'.$class.'">';
 
 	// Loop through each collection, output child albums
-	while ($row = mysql_fetch_assoc($result)) {
+	while ($row = mysqli_fetch_assoc($result)) {
 		// Output collection name
 		$collection_link = '<a href="'.generate_url('collection', $row['id']).'">'.$row['name'].'</a>';
 		$output .= "\n\t" . '<li>'.$collection_link.'</li>';
@@ -1598,7 +1610,7 @@ function plogger_list_categories($class) {
 		$query = "SELECT * FROM ".PLOGGER_TABLE_PREFIX."albums WHERE parent_id = '$row[id]' ORDER BY name DESC";
 
 		$output .= "\n<ul>";
-		while ($albums = mysql_fetch_assoc($result)) {
+		while ($albums = mysqli_fetch_assoc($result)) {
 			$album_link = '<a href="'.generate_url('albums', $albums['id']).'">'.$albums['name'].'</a>';
 			$output .= "\n\t" . '<li>'.$album_link.'</li>';
 		}
@@ -1709,7 +1721,7 @@ function plogger_init_picture($arr) {
 
 	unset($_SESSION['require_captcha']);
 
-	$row = mysql_fetch_assoc($result);
+	$row = mysqli_fetch_assoc($result);
 
 	if (!$row) {
 		return false;
@@ -1768,7 +1780,7 @@ function plogger_init_picture($arr) {
 
 	$result = run_query($sql);
 
-	while ($image = mysql_fetch_assoc($result)) {
+	while ($image = mysqli_fetch_assoc($result)) {
 		$image_list[] = $image['id'];
 	}
 
@@ -1782,7 +1794,7 @@ function plogger_init_picture($arr) {
 	WHERE `id`=$id";
 	$result = run_query($sql);
 
-	$GLOBALS['available_pictures'] = mysql_num_rows($result);
+	$GLOBALS['available_pictures'] = mysqli_num_rows($result);
 	$GLOBALS['picture_counter'] = 0;
 	$GLOBALS['picture_dbh'] = $result;
 
@@ -1818,7 +1830,7 @@ function plogger_init_picture($arr) {
 	}
 	$result = run_query($query);
 
-	$GLOBALS['available_comments'] = mysql_num_rows($result);
+	$GLOBALS['available_comments'] = mysqli_num_rows($result);
 	$GLOBALS['comment_counter'] = 0;
 	$GLOBALS['comment_dbh'] = $result;
 }
@@ -1860,7 +1872,7 @@ function plogger_init_pictures($arr) {
 	}
 
 	$result = run_query("SELECT COUNT(DISTINCT p.`id`) AS cnt ".$sql);
-	$row = mysql_fetch_assoc($result);
+	$row = mysqli_fetch_assoc($result);
 
 	$GLOBALS['total_pictures'] = $row['cnt'];
 
@@ -1929,7 +1941,7 @@ function plogger_init_pictures($arr) {
 	UNIX_TIMESTAMP(`date_submitted`) AS `unix_date_submitted`,
 	UNIX_TIMESTAMP(`EXIF_date_taken`) AS `unix_exif_date_taken` ".$sql);
 
-	$GLOBALS['available_pictures'] = mysql_num_rows($result);
+	$GLOBALS['available_pictures'] = mysqli_num_rows($result);
 	$GLOBALS['picture_counter'] = 0;
 	$GLOBALS['picture_dbh'] = $result;
 }
@@ -1961,7 +1973,7 @@ function plogger_init_search($arr) {
 	if ((count($terms) != 1) || ($terms[0] != '')) {
 		$query .= " WHERE ( ";
 		foreach ($terms as $term) {
-			$term = mysql_real_escape_string($term);
+			$term = mysqli_real_escape_string($GLOBALS["PLOGGER_DBH"],$term);
 			$multi_term = explode('+', $term);
 			if (count($multi_term)>1) {
 				$path = implode("%' AND `path` LIKE '%", $multi_term);
@@ -1998,7 +2010,7 @@ function plogger_init_search($arr) {
 	}
 
 	$result = run_query("SELECT COUNT(DISTINCT p.`id`) AS cnt ".$query);
-	$row = mysql_fetch_assoc($result);
+	$row = mysqli_fetch_assoc($result);
 
 	$GLOBALS['total_pictures'] = $row['cnt'];
 	// And I need sort order here as well
@@ -2007,7 +2019,7 @@ function plogger_init_search($arr) {
 	UNIX_TIMESTAMP(`date_submitted`) AS `unix_date_submitted` ".$query."
 	GROUP BY p.`id` ORDER BY `$sortby` $sortdir LIMIT $from, $limit");
 
-	$GLOBALS['available_pictures'] = mysql_num_rows($result);
+	$GLOBALS['available_pictures'] = mysqli_num_rows($result);
 	$GLOBALS['picture_counter'] = 0;
 	$GLOBALS['picture_dbh'] = $result;
 }
@@ -2016,7 +2028,7 @@ function plogger_init_collections($arr) {
 	$sql = "SELECT COUNT(DISTINCT `parent_collection`) AS `num_items`
 	FROM `".PLOGGER_TABLE_PREFIX."pictures`";
 	$result = run_query($sql);
-	$num_items = mysql_result($result, 0, 'num_items');
+	$num_items = mysqli_result($result, 0, 'num_items');
 	$GLOBALS['total_pictures'] = $num_items;
 
 	// Create a list of all non-empty collections. Could be done with subqueries, but
@@ -2031,7 +2043,7 @@ function plogger_init_collections($arr) {
 	$sql = "SELECT parent_collection, parent_album, COUNT(*) AS imagecount
 	FROM `".PLOGGER_TABLE_PREFIX."pictures` GROUP BY parent_collection, parent_album";
 	$result = run_query($sql);
-	while($row = mysql_fetch_assoc($result)) {
+	while($row = mysqli_fetch_assoc($result)) {
 		$image_collection_count[$row['parent_collection']] = $row['imagecount'];
 		$image_album_count[$row['parent_album']] = $row['imagecount'];
 	}
@@ -2050,7 +2062,7 @@ function plogger_init_collections($arr) {
 	GROUP BY parent_id";
 
 	$result = run_query($sql);
-	while($row = mysql_fetch_assoc($result)) {
+	while($row = mysqli_fetch_assoc($result)) {
 		$album_count[$row['parent_id']] = $row['albumcount'];
 	}
 
@@ -2082,7 +2094,7 @@ function plogger_init_collections($arr) {
 	$sql = "SELECT * FROM `".PLOGGER_TABLE_PREFIX."collections`".$where.$order.$limit;
 	$result = run_query($sql);
 
-	$GLOBALS['available_collections'] = mysql_num_rows($result);
+	$GLOBALS['available_collections'] = mysqli_num_rows($result);
 	$GLOBALS['collection_counter'] = 0;
 	$GLOBALS['collection_dbh'] = $result;
 }
@@ -2100,7 +2112,7 @@ function plogger_init_albums($arr) {
 	FROM `".PLOGGER_TABLE_PREFIX."pictures` $where";
 
 	$result = run_query($sql);
-	$num_items = mysql_result($result, 0, 'num_items');
+	$num_items = mysqli_result($result, 0, 'num_items');
 
 	$GLOBALS['total_pictures'] = $num_items;
 
@@ -2113,7 +2125,7 @@ function plogger_init_albums($arr) {
 	// 1. create a list of all albums with at least one photo
 	$sql = "SELECT parent_album, COUNT(*) AS imagecount FROM `".PLOGGER_TABLE_PREFIX."pictures` GROUP BY parent_album";
 	$result = run_query($sql);
-	while($row = mysql_fetch_assoc($result)) {
+	while($row = mysqli_fetch_assoc($result)) {
 		$image_count[$row['parent_album']] = $row['imagecount'];
 	}
 
@@ -2153,7 +2165,7 @@ function plogger_init_albums($arr) {
 
 	$result = run_query($sql);
 
-	$GLOBALS['available_albums'] = mysql_num_rows($result);
+	$GLOBALS['available_albums'] = mysqli_num_rows($result);
 	$GLOBALS['album_counter'] = 0;
 	$GLOBALS['album_dbh'] = $result;
 
@@ -2377,7 +2389,7 @@ function plogger_picture_allows_comments() {
 }
 
 function plogger_load_picture() {
-	$rv = mysql_fetch_assoc($GLOBALS['picture_dbh']);
+	$rv = mysqli_fetch_assoc($GLOBALS['picture_dbh']);
 	$GLOBALS['picture_counter']++;
 	$GLOBALS['current_picture'] = $rv;
 	return $rv;
@@ -2388,7 +2400,7 @@ function plogger_picture_has_comments() {
 }
 
 function plogger_load_comment() {
-	$rv = mysql_fetch_assoc($GLOBALS['comment_dbh']);
+	$rv = mysqli_fetch_assoc($GLOBALS['comment_dbh']);
 	$GLOBALS['comment_counter']++;
 	$GLOBALS['current_comment'] = $rv;
 	return $rv;
@@ -2647,7 +2659,7 @@ function plogger_picture_comment_count() {
 	$comment_query = "SELECT COUNT(`id`) AS `num_comments` FROM `".PLOGGER_TABLE_PREFIX."comments`
 	WHERE approved = 1 AND `parent_id`='".$row['id']."'";
 	$comment_result = run_query($comment_query);
-	$num_comments = mysql_result($comment_result, 0, 'num_comments');
+	$num_comments = mysqli_result($comment_result, 0, 'num_comments');
 	return $num_comments;
 }
 
@@ -2802,7 +2814,7 @@ function plogger_get_prev_picture_url() {
 
 /*** The following functions can only be used inside the Collections loop ***/
 function plogger_load_collection() {
-	$rv = mysql_fetch_assoc($GLOBALS['collection_dbh']);
+	$rv = mysqli_fetch_assoc($GLOBALS['collection_dbh']);
 	$GLOBALS['collection_counter']++;
 	$GLOBALS['current_collection'] = $rv;
 	return $rv;
@@ -2830,7 +2842,7 @@ function plogger_get_collection_thumb() {
 		$thumb_query .= " `parent_collection`='".$rv['id']."' ORDER BY `id` DESC LIMIT 1";
 	}
 	$thumb_result = run_query($thumb_query);
-	$thumb_data = mysql_fetch_assoc($thumb_result);
+	$thumb_data = mysqli_fetch_assoc($thumb_result);
 	if ($thumb_data) {
 		$rv['thumbnail_id'] = $thumb_data['id'];
 		$rv['thumbnail_path'] = $thumb_data['path'];
@@ -2879,7 +2891,7 @@ function plogger_get_collection_id() {
 function plogger_count_collections() {
 	$numquery = "SELECT COUNT(DISTINCT `parent_collection`) AS `num_collections` FROM `".PLOGGER_TABLE_PREFIX."pictures`";
 	$numresult = run_query($numquery);
-	$num_albums = mysql_result($numresult, 0, 'num_collections');
+	$num_albums = mysqli_result($numresult, 0, 'num_collections');
 	return $num_albums;
 }
 
@@ -2887,7 +2899,7 @@ function plogger_count_collections() {
 
 /*** The following functions can only be used inside the Albums loop ***/
 function plogger_load_album() {
-	$rv = mysql_fetch_assoc($GLOBALS['album_dbh']);
+	$rv = mysqli_fetch_assoc($GLOBALS['album_dbh']);
 	$GLOBALS['album_counter']++;
 	$GLOBALS['current_album'] = $rv;
 	return $rv;
@@ -2914,7 +2926,7 @@ function plogger_get_album_thumb() {
 	else
 	$thumb_query .= " `parent_album`='".$rv['id']."' ORDER BY `date_submitted` DESC LIMIT 1";
 	$thumb_result = run_query($thumb_query);
-	$thumb_data = mysql_fetch_assoc($thumb_result);
+	$thumb_data = mysqli_fetch_assoc($thumb_result);
 	if ($thumb_data) {
 		$rv['thumbnail_id'] = $thumb_data['id'];
 		$rv['thumbnail_path'] = $thumb_data['path'];
@@ -2928,7 +2940,7 @@ function plogger_album_picture_count() {
 		// XXX: this may be faster?
 		$numquery = "SELECT COUNT(DISTINCT `id`) AS `num_pictures` FROM `".PLOGGER_TABLE_PREFIX."pictures` WHERE `parent_album`='".$row['id']."'";
 		$numresult = run_query($numquery);
-		return mysql_result($numresult, 0, 'num_pictures');
+		return mysqli_result($numresult, 0, 'num_pictures');
 	} else {
 		return 0;
 	}
@@ -3012,7 +3024,7 @@ function plogger_get_comments($picture_id) {
 	ORDER BY `date` DESC";
 	$result = run_query($query);
 	$comments = array();
-	while ($row = mysql_fetch_assoc($result)) {
+	while ($row = mysqli_fetch_assoc($result)) {
 		$comments[$row['id']] = $row;
 	}
 	return $comments;

@@ -91,12 +91,12 @@ if (!isset($edit_page)) {
 
 	// Let's generate the pagination menu as well
 	$recordCount = "SELECT count(*) AS num_comments FROM ".PLOGGER_TABLE_PREFIX."comments WHERE `approved` = 1";
-	$totalRowsResult = mysql_query($recordCount);
-	$num_comments = mysql_result($totalRowsResult, 0, 'num_comments');
+	$totalRowsResult = mysqli_query($GLOBALS["PLOGGER_DBH"],$recordCount);
+	$num_comments = mysqli_result($totalRowsResult, 0, 'num_comments');
 
 	$query = "SELECT count(*) AS in_moderation FROM ".PLOGGER_TABLE_PREFIX."comments WHERE `approved` = 0";
 	$mod_result = run_query($query);
-	$num_comments_im = mysql_result($mod_result, 0, 'in_moderation');
+	$num_comments_im = mysqli_result($mod_result, 0, 'in_moderation');
 
 	// Filter based on whether were looking at approved comments or unmoderated comments
 	if (isset($_REQUEST['moderate']) && $_REQUEST['moderate'] == 1) {
@@ -118,11 +118,11 @@ if (!isset($edit_page)) {
 	// Generate javascript init function for ajax editing
 	$query = "SELECT *, UNIX_TIMESTAMP(`date`) AS `date` from ".PLOGGER_TABLE_PREFIX."comments WHERE `approved` = ".$approved." ORDER BY `id` DESC ".$limit;
 	$result = run_query($query);
-	if (mysql_num_rows($result) > 0) {
+	if (mysqli_num_rows($result) > 0) {
 		$output .= "\n\t\t" . '<script type="text/javascript">';
 		$output .= "\n\t\t\t" . 'Event.observe(window, \'load\', init, false);';
 		$output .= "\n\t\t\t" . 'function init() {' . "\n";
-		while($row = mysql_fetch_assoc($result)) {
+		while($row = mysqli_fetch_assoc($result)) {
 			$output .= "\t\t\t\tmakeEditable('comment-comment-".$row['id']."');
 				makeEditable('comment-author-".$row['id']."');
 				makeEditable('comment-url-".$row['id']."');
@@ -138,7 +138,7 @@ if (!isset($edit_page)) {
 	$empty = 0;
 
 	if ($result) {
-		if (mysql_num_rows($result) == 0) {
+		if (mysqli_num_rows($result) == 0) {
 			if ($approved) {
 				$output .= "\n\t\t" . '<p class="stats-info">'.plog_tr('You have no comments on your gallery').'.</p>';
 			} else {
@@ -162,7 +162,7 @@ if (!isset($edit_page)) {
 			$output .= $pagination_menu;
 		}
 
-		while($row = mysql_fetch_assoc($result)) {
+		while($row = mysqli_fetch_assoc($result)) {
 			// If we're on our first iteration, dump the header
 			if ($counter == 0) {
 				if ($approved) {

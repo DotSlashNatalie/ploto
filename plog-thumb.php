@@ -21,7 +21,7 @@ if (!isset($_REQUEST['type'])) $_REQUEST['type'] = 1;
 
 $query = "SELECT `path`, `id` FROM `plogger_pictures` WHERE `id`=".intval($_REQUEST['id']);
 $result = run_query($query);
-$thumb = mysql_fetch_assoc($result);
+$thumb = mysqli_fetch_assoc($result);
 
 $thumb['type'] = intval($_REQUEST['type']);
 

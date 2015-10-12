@@ -325,7 +325,7 @@ function get_collection_ids($sort = 'alpha', $order = 'DESC') {
 
 	$collections = array();
 
-	while ($collection = mysql_fetch_assoc($resultCollection)) {
+	while ($collection = mysqli_fetch_assoc($resultCollection)) {
 		$collections[$collection['id']] = $collection;
 	}
 
@@ -369,7 +369,7 @@ function get_album_ids($collection_id = null, $sort = 'alpha', $order = 'DESC') 
 
 	$result = run_query($query);
 
-	while ($album = mysql_fetch_assoc($result)) {
+	while ($album = mysqli_fetch_assoc($result)) {
 		$albums[$album['album_id']] = $album;
 	}
 
@@ -400,7 +400,7 @@ function get_picture_ids($album_id, $order = 'alpha', $sort = 'DESC') {
 
 	$pictures = array();
 
-	while ($row = mysql_fetch_assoc($result)) {
+	while ($row = mysqli_fetch_assoc($result)) {
 		$pictures[$row['id']] = $row;
 	}
 

@@ -48,16 +48,16 @@ if (!is_plogger_installed()) {
 	die($img."\n" . '<p style="font-family: tahoma, verdana, arial, sans-serif; font-size: 16px; letter-spacing: .25px; margin: 30px;">'.plog_tr('Please run <a href="'.$install_url.'">_install.php</a> to set up Plogger. If you are upgrading from a previous version, please run <a href="'.$upgrade_url.'">_upgrade.php</a>').'.</p>');
 }
 
-connect_db();
+//connect_db();
 
 $query = "SELECT * FROM `".PLOGGER_TABLE_PREFIX."config`";
 $result = run_query($query);
 
-if (mysql_num_rows($result) == 0) {
+if (mysqli_num_rows($result) == 0) {
 	die(plog_tr('No config information in the database.'));
 }
 
-$config = mysql_fetch_assoc($result);
+$config = mysqli_fetch_assoc($result);
 $config['gallery_name'] = SmartStripSlashes($config['gallery_name']);
 
 $config['basedir'] = PLOGGER_DIR;
@@ -96,7 +96,7 @@ if ($config['use_mod_rewrite'] == 1 && $config['embedded'] == 0) {
 	$config['baseurl'] = 'http://'.$_SERVER['HTTP_HOST'].dirname($_SERVER['PHP_SELF']).'/';
 // otherwise just use our cleaned up version of $_SERVER['PHP_SELF'] from plog-globals.php
 } else {
-	$config['baseurl'] = 'http://'.$_SERVER['HTTP_HOST'].$_SERVER['PHP_SELF'];
+	$config['baseurl'] = 'http://' . $_SERVER['HTTP_HOST'] . $_SERVER["SCRIPT_NAME"];
 }
 
 // Remove plog-admin/ from the end, if present .. is there a better way to determine the full url?
@@ -123,13 +123,13 @@ if (!headers_sent()) {
 $query = "SELECT * FROM `".PLOGGER_TABLE_PREFIX."thumbnail_config`";
 $result = run_query($query);
 
-if (mysql_num_rows($result) == 0) {
+if (mysqli_num_rows($result) == 0) {
 	die(plog_tr('No thumbnail config information in the database.'));
 }
 
 $prefix_arr = array(1 => 'small', 2 => 'large', 3 => 'rss', 4 => 'thumbnav');
 
-while($row = mysql_fetch_assoc($result)) {
+while($row = mysqli_fetch_assoc($result)) {
 	$thumbnail_config[$row['id']] = array(
 	'type' => $prefix_arr[$row['id']],
 	'size' => $row['max_size'],
